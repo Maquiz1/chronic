@@ -94,8 +94,7 @@ class ReportPageTests(TestCase):
             c.post(reverse('crf:create'), {'hospital_id': f'M20-00-{i:02d}', 'interview_date': today - datetime.timedelta(days=days)})
         p = Participant.objects.order_by('study_id').first()
         c.post(reverse('crf:section', args=[p.pk, 'G']), {
-            'bilirubin': '72', 'bilirubin_unit': '1', 'albumin': '24', 'albumin_unit': '1', 'inr': '1.9',
-            'creatinine': '421', 'creatinine_unit': '1', 'sodium': '129'})
+            'bilirubin': '72', 'albumin': '24', 'inr': '1.9', 'creatinine': '421', 'sodium': '129'})
         c.post(reverse('crf:section', args=[p.pk, 'F']), {'ascites': '1', 'ascites_grade': '1', 'hepatic_enceph': '0'})
         self.client.force_login(make_user('investigator', email='inv2@example.org'))
 

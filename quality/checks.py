@@ -247,7 +247,7 @@ def consistency_issues(values):
         add(ERROR, 'F', 'bp_diastolic', f'Diastolic pressure ({diastolic}) is not below systolic ({systolic}).', 'bp')
     total, direct = derived.bilirubin_mgdl(v), _direct_bilirubin_mgdl(v)
     if total is not None and direct is not None and direct > total * 1.02:
-        add(ERROR, 'G', 'direct_bilirubin', 'Direct bilirubin is higher than total bilirubin (check the units).',
+        add(ERROR, 'G', 'direct_bilirubin', 'Direct bilirubin is higher than total bilirubin.',
             'direct_bili')
     if v.get('sym_jaundice') and v.get('jaundice') == 0 and (total or 0) > 3:
         add(WARNING, 'F', 'jaundice', 'Jaundice absent on examination with bilirubin above 3 mg/dL.', 'jaundice')
@@ -256,10 +256,7 @@ def consistency_issues(values):
 
 def _direct_bilirubin_mgdl(v):
     x = _num(v.get('direct_bilirubin'))
-    unit = v.get('direct_bilirubin_unit')
-    if x is None or unit not in (1, 2):
-        return None
-    return x / 17.1 if unit == 1 else x
+    return None if x is None else x / 17.1  # entered in µmol/L
 
 
 def all_issues(values):

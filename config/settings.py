@@ -138,9 +138,9 @@ EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '15'))
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'LIVERCare <no-reply@example.org>')
 
 # --- Study ---
-STUDY_START_DATE = os.environ.get('STUDY_START_DATE', '')  # YYYY-MM-DD; interviews before it are flagged
+STUDY_START_DATE = os.environ.get('STUDY_START_DATE', '2026-10-01')  # YYYY-MM-DD; interviews before it are flagged
 STUDY_ID_PREFIX = os.environ.get('STUDY_ID_PREFIX', 'CLD')
-STUDY_TARGET = int(os.environ.get('STUDY_TARGET', '0') or 0)  # planned sample size; 0 = not set
+STUDY_TARGET = int(os.environ.get('STUDY_TARGET', '250') or 0)  # planned sample size; 0 = not set
 
 # --- Background jobs (Celery worker + beat, Redis broker). Schedules live in the database (Django admin). ---
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://cld-redis:6379/0')

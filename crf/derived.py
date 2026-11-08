@@ -17,27 +17,21 @@ def bmi(v):
 
 
 def bilirubin_mgdl(v):
+    """Bilirubin is entered in µmol/L (MNH laboratory unit)."""
     x = _f(v.get('bilirubin'))
-    unit = v.get('bilirubin_unit')
-    if x is None or unit not in (1, 2):
-        return None
-    return round(x / 17.1, 2) if unit == 1 else x
+    return None if x is None else round(x / 17.1, 2)
 
 
 def albumin_gdl(v):
+    """Albumin is entered in g/L (MNH laboratory unit)."""
     x = _f(v.get('albumin'))
-    unit = v.get('albumin_unit')
-    if x is None or unit not in (1, 2):
-        return None
-    return round(x / 10, 2) if unit == 1 else x
+    return None if x is None else round(x / 10, 2)
 
 
 def creatinine_mgdl(v):
+    """Creatinine is entered in µmol/L (MNH laboratory unit)."""
     x = _f(v.get('creatinine'))
-    unit = v.get('creatinine_unit')
-    if x is None or unit not in (1, 2):
-        return None
-    return round(x / 88.4, 2) if unit == 1 else x
+    return None if x is None else round(x / 88.4, 2)
 
 
 def apri(v):

@@ -31,7 +31,8 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
                    'hospital_id': forms.TextInput(attrs={'autofocus': True, 'autocomplete': 'off', 'maxlength': 9,
                                                          'placeholder': 'M78-89-12', 'data-mrn': '',
                                                          'style': 'text-transform: uppercase'})}
-        help_texts = {'hospital_id': 'Required. Starts with A or M, then 6 digits: type M788912 and the dashes are added (M78-89-12). '
+        help_texts = {'hospital_id': 'Required. The MR Number (not the IP Number): A or M, then 6 digits. Type M788912 and the dashes '
+                                     'are added (M78-89-12). '
                                      'Visible only to Data Clerks, Data Managers and Admins.',
                       'phone_number': 'Optional. Visible only to Data Clerks, Data Managers and Admins.',
                       'admission_date': 'Can be added later.'}
@@ -45,9 +46,14 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
             del self.fields['hospital_id']
 
     def clean_hospital_id(self):
-        value = normalise_hospital_id(self.cleaned_data.get('hospital_id'))
+        raw = self.cleaned_data.get('hospital_id') or ''
+        if '/' in raw:
+            raise forms.ValidationError('This looks like the IP Number. Enter the MR Number, without the "/..." '
+                                        'admission part, e.g. M78-89-12.')
+        value = normalise_hospital_id(raw)
         if not HOSPITAL_ID_PATTERN.match(value):
-            raise forms.ValidationError('The MRN starts with A or M followed by 6 digits, e.g. M78-89-12.')
+            raise forms.ValidationError('The MR Number starts with A or M followed by 6 digits, e.g. M78-89-12 '
+                                        '(not the IP Number).')
         existing = Participant.all_objects.filter(hospital_id=value).exclude(pk=self.instance.pk).first()
         if existing and existing.is_deleted:
             raise forms.ValidationError(

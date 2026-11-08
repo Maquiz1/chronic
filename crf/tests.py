@@ -195,6 +195,8 @@ class EntryTests(TestCase):
         self.assertContains(r, 'starts with A or M')
         r = self.client.post(reverse('crf:create'), {'hospital_id': 'M10-20-3', 'interview_date': today})
         self.assertContains(r, 'starts with A or M')
+        r = self.client.post(reverse('crf:create'), {'hospital_id': 'M71-35-77/4', 'interview_date': today})
+        self.assertContains(r, 'looks like the IP Number')
         self.assertEqual(Participant.objects.count(), 1)
         self.client.post(reverse('crf:create'), {'hospital_id': 'a102031', 'interview_date': today})
         self.assertEqual(Participant.objects.count(), 2)
@@ -221,19 +223,26 @@ class EntryTests(TestCase):
         missing = [f.name for f in status['missing']]
         self.assertIn('platelets', missing)
         self.assertNotIn('inr', missing)
-        self.assertNotIn('bilirubin_unit', missing)  # unit only expected once bilirubin is entered
         # Results arrive later
-        self.client.post(self.section_url('G'), {'hb': '9.8', 'bilirubin': '68.4', 'bilirubin_unit': '1', 'inr': '1.9'})
+        self.client.post(self.section_url('G'), {'hb': '9.8', 'bilirubin': '68.4', 'inr': '1.9'})
         g.refresh_from_db()
         self.assertEqual(g.inr, Decimal('1.90'))
         self.assertEqual(g.not_done, [])
 
-    def test_impossible_value_refused_unit_aware(self):
-        r = self.client.post(self.section_url('G'), {'creatinine': '421', 'creatinine_unit': '2'})  # 421 mg/dL
+    def test_impossible_value_refused(self):
+        r = self.client.post(self.section_url('G'), {'creatinine': '5000'})  # µmol/L
         self.assertContains(r, 'Impossible value')
         self.assertFalse(SECTION_MODELS['G'].objects.exists())
-        self.client.post(self.section_url('G'), {'creatinine': '421', 'creatinine_unit': '1'})  # 421 µmol/L is fine
+        self.client.post(self.section_url('G'), {'creatinine': '421'})  # 421 µmol/L is fine
         self.assertEqual(SECTION_MODELS['G'].objects.get().creatinine, Decimal('421.0'))
+
+    def test_lab_values_as_printed_by_mnh(self):
+        # Jeeva prints enzymes with 2 decimals; electrolytes may have 1
+        r = self.client.post(self.section_url('G'), {'alt': '33.69', 'ast': '137.37', 'alp': '156.03', 'ggt': '79.80',
+                                                     'sodium': '134.5', 'potassium': '4.25', 'chloride': '101.2'})
+        self.assertEqual(r.status_code, 302)
+        g = SECTION_MODELS['G'].objects.get()
+        self.assertEqual((g.alt, g.sodium, g.potassium), (Decimal('33.69'), Decimal('134.5'), Decimal('4.25')))
 
     def test_skip_rules_clear_hidden_answers(self):
         self.client.post(self.section_url('F'), {'hepatic_enceph': '1', 'he_grade': '3'})
@@ -347,8 +356,8 @@ class EntryTests(TestCase):
 
 class ScoreTests(TestCase):
     def test_meld_na_and_child_pugh(self):
-        v = {'creatinine': Decimal('1.9'), 'creatinine_unit': 2, 'bilirubin': Decimal('4.2'), 'bilirubin_unit': 2,
-             'inr': Decimal('1.6'), 'sodium': 128, 'albumin': Decimal('26'), 'albumin_unit': 1,
+        v = {'creatinine': Decimal('168.0'), 'bilirubin': Decimal('71.82'),  # 1.9 and 4.2 mg/dL
+             'inr': Decimal('1.6'), 'sodium': 128, 'albumin': Decimal('26'),
              'ascites': 1, 'ascites_grade': 1, 'hepatic_enceph': 1, 'he_grade': 2}
         self.assertEqual(derived.meld(v), 23.3)
         self.assertEqual(derived.meld_na(v), 28)
@@ -392,15 +401,14 @@ class ScoreTests(TestCase):
         self.assertEqual(SECTION_MODELS['G'].objects.get().img_hcc, 1)
 
     def test_unit_conversion(self):
-        self.assertEqual(derived.creatinine_mgdl({'creatinine': Decimal('88.4'), 'creatinine_unit': 1}), 1.0)
-        self.assertEqual(derived.bilirubin_mgdl({'bilirubin': Decimal('34.2'), 'bilirubin_unit': 1}), 2.0)
+        self.assertEqual(derived.creatinine_mgdl({'creatinine': Decimal('88.4')}), 1.0)
+        self.assertEqual(derived.bilirubin_mgdl({'bilirubin': Decimal('34.2')}), 2.0)
         self.assertIsNone(derived.meld({'inr': 1}))
 
     def test_checks_find_contradictions_and_wrong_units(self):
         v = {'interview_date': timezone.localdate(), 'admission_date': timezone.localdate(),
-             'hepatic_enceph': 1, 'he_grade': 0, 'hbsag': 1, 'hbv': 0, 'albumin': Decimal('8'), 'albumin_unit': 1,
-             'bilirubin': Decimal('2.0'), 'bilirubin_unit': 2, 'direct_bilirubin': Decimal('51'),
-             'direct_bilirubin_unit': 1, 'bp_systolic': 90, 'bp_diastolic': 95}
+             'hepatic_enceph': 1, 'he_grade': 0, 'hbsag': 1, 'hbv': 0, 'albumin': Decimal('8'),
+             'bilirubin': Decimal('34.2'), 'direct_bilirubin': Decimal('51'), 'bp_systolic': 90, 'bp_diastolic': 95}
         rules = {i.rule for i in checks.all_issues(v)}
         self.assertIn('he_grade0', rules)
         self.assertIn('hbsag_history', rules)
