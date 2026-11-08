@@ -203,7 +203,9 @@ SECTIONS = [
         YN('hypertension', 'History of hypertension', 'E3'),
         YN('ckd', 'History of chronic kidney disease', 'E4'),
         YN('heart_disease', 'History of heart disease', 'E5'),
-        Field('other_comorbidity_specify', 'Other comorbidity, specify', 'text', qn='E6', expected=False),
+        YN('other_comorbidity', 'Any other comorbidity', 'E6', status='Added (not on CRF)', decision='D42'),
+        Field('other_comorbidity_specify', 'If yes, specify', 'text', qn='E6a',
+              relevant=[('other_comorbidity', '==', 1)], decision='D42'),
     ]),
     Section('F', 'examination', 'Physical examination findings', [
         Field('weight_kg', 'Weight', 'decimal', qn='F1', group='Anthropometric measurements', unit='kg', dp=1,

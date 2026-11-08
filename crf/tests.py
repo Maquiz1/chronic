@@ -244,6 +244,16 @@ class EntryTests(TestCase):
         g = SECTION_MODELS['G'].objects.get()
         self.assertEqual((g.alt, g.sodium, g.potassium), (Decimal('33.69'), Decimal('134.5'), Decimal('4.25')))
 
+    def test_other_comorbidity_yes_no(self):
+        self.client.post(self.section_url('E'), {'other_comorbidity': '0', 'other_comorbidity_specify': 'Asthma'})
+        e = SECTION_MODELS['E'].objects.get()
+        self.assertEqual((e.other_comorbidity, e.other_comorbidity_specify), (0, ''))  # cleared: not asked when No
+        missing = [f.name for f in checks.section_status('E', Participant.objects.get(pk=self.p.pk).values())['missing']]
+        self.assertNotIn('other_comorbidity_specify', missing)
+        self.client.post(self.section_url('E'), {'other_comorbidity': '1'})
+        missing = [f.name for f in checks.section_status('E', Participant.objects.get(pk=self.p.pk).values())['missing']]
+        self.assertIn('other_comorbidity_specify', missing)  # Yes: specify becomes expected
+
     def test_skip_rules_clear_hidden_answers(self):
         self.client.post(self.section_url('F'), {'hepatic_enceph': '1', 'he_grade': '3'})
         d = SECTION_MODELS['F'].objects.get()
