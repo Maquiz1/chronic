@@ -1,0 +1,18 @@
+<div style="font-family:Arial,sans-serif;font-size:14px;color:#222;max-width:640px">
+  <h2 style="color:#1f3864;margin-bottom:4px">{{ title }}</h2>
+  <p>Hello {{ user.first_name|default:user.email }},</p>
+  <table cellpadding="6" style="border-collapse:collapse;border:1px solid #ddd">
+    <tr><td>Participants registered</td><td><b>{{ s.total }}</b>{% if s.start %} ({{ s.new }} in this period){% endif %}</td></tr>
+    <tr><td>Complete records</td><td><b>{{ s.complete }}</b> ({{ s.locked }} verified &amp; locked)</td></tr>
+    <tr><td>Average completeness</td><td><b>{{ s.avg_pct }}%</b></td></tr>
+    <tr><td>Check errors / warnings</td><td>{{ s.errors }} / {{ s.warnings }}</td></tr>
+    <tr><td>Queries open / answered / closed</td><td>{{ s.queries_open }} / {{ s.queries_answered }} / {{ s.queries_closed }}</td></tr>
+    <tr><td>Child-Pugh A / B / C</td><td>{{ s.child_pugh.A }} / {{ s.child_pugh.B }} / {{ s.child_pugh.C }} <span style="color:#777">(not yet calculable: {{ s.child_pugh_unknown }})</span></td></tr>
+    <tr><td>MELD-Na &ge; 15</td><td>{{ s.meld15 }}</td></tr>
+    <tr><td>Discharged alive / died</td><td>{{ s.discharged }} / {{ s.died }}</td></tr>
+  </table>
+  {% if s.pending_labs %}<h3 style="color:#1f3864">Laboratory results still pending</h3>
+  <ul>{% for name, n in s.pending_labs %}<li>{{ name }}: {{ n }}</li>{% endfor %}</ul>{% endif %}
+  <p>Completeness by section is in the attached PDF.</p>
+  <p><a href="{{ links.dashboard }}">Dashboard</a> · <a href="{{ links.quality }}">Data quality</a> · <a href="{{ links.pending }}">Pending results</a> · <a href="{{ links.queries }}">Queries</a></p>
+</div>

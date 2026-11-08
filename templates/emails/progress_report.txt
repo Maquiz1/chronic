@@ -1,0 +1,20 @@
+{{ title }}
+
+Hello {{ user.first_name|default:user.email }},
+
+Participants registered: {{ s.total }}{% if s.start %} ({{ s.new }} interviewed {{ s.start|date:"d M" }} - {{ s.end|date:"d M Y" }}){% endif %}
+Complete records: {{ s.complete }} · verified and locked: {{ s.locked }} · average completeness: {{ s.avg_pct }}%
+Check errors / warnings: {{ s.errors }} / {{ s.warnings }}
+Queries open / answered / closed: {{ s.queries_open }} / {{ s.queries_answered }} / {{ s.queries_closed }}
+Child-Pugh A / B / C: {{ s.child_pugh.A }} / {{ s.child_pugh.B }} / {{ s.child_pugh.C }} (not yet calculable: {{ s.child_pugh_unknown }}) · MELD-Na >= 15: {{ s.meld15 }}
+Outcome: {{ s.discharged }} discharged alive, {{ s.died }} died
+
+By section (complete / incomplete / not started):
+{% for r in s.per_section %}  {{ r.code }} {{ r.title }}: {{ r.complete }} / {{ r.incomplete }} / {{ r.not_started }}
+{% endfor %}{% if s.pending_labs %}
+Laboratory results still pending:
+{% for name, n in s.pending_labs %}  {{ name }}: {{ n }}
+{% endfor %}{% endif %}
+The same numbers are in the attached PDF.
+Dashboard: {{ links.dashboard }}
+Data quality: {{ links.quality }}

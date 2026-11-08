@@ -1,0 +1,7 @@
+<div class="dropdown d-inline-block">
+  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">{{ label }}</button>
+  <ul class="dropdown-menu dropdown-menu-end">
+    <li><a class="dropdown-item" href="{% url 'exports:codebook' key 'xlsx' %}">Data dictionary (Excel)</a></li>
+    <li><a class="dropdown-item" href="{% url 'exports:codebook' key 'pdf' %}">Codebook (PDF)</a></li>
+  </ul>
+</div>

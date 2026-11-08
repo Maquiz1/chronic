@@ -28,11 +28,12 @@ ACTIONS = {
     'raise_query': 'Raise and close data queries',
     'lock_record': 'Lock (verify) and unlock records',
     'delete_record': 'Delete a participant record',
-    'export_deidentified': 'Export data without phone numbers',
-    'export_identifiable': 'Export data with phone numbers',
+    'export_deidentified': 'Export data without hospital IDs or phone numbers',
+    'export_identifiable': 'Export data with hospital IDs and phone numbers',
     'view_audit': 'See the change history (audit trail)',
     'approve_users': 'Approve new accounts as Data Clerk or Investigator',
     'manage_users': 'Manage all accounts and roles, including Admins and Data Managers',
+    'manage_tasks': 'See scheduled tasks and sent emails, run a task now',
 }
 
 PERMISSIONS = {

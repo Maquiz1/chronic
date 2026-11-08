@@ -27,11 +27,11 @@ fi
 
 # 2. Build -----------------------------------------------------------------------
 echo "Building the new image (the current site keeps running)..."
-docker compose build cld-web
+docker compose build cld-web  # cld-worker and cld-beat use the same image
 
 # 3. Migrate ---------------------------------------------------------------------
-echo "Starting the database if needed..."
-docker compose up -d --wait cld-db
+echo "Starting the database and Redis if needed..."
+docker compose up -d --wait cld-db cld-redis
 
 echo "Migrations that will run:"
 docker compose run --rm cld-web python manage.py migrate --plan
@@ -42,7 +42,10 @@ docker compose run --rm cld-web python manage.py migrate --noinput
 echo "Switching to the new code..."
 docker compose up -d
 
-echo "Writing the data dictionary for this version..."
+echo "Creating scheduled tasks (existing schedules and on/off settings are kept)..."
+docker compose exec -T cld-web python manage.py setup_schedules
+
+echo "Checking that the data dictionary builds for this version..."
 docker compose exec -T cld-web python manage.py build_dictionary --dir /tmp >/dev/null && echo "OK"
 
 if [ "${1:-}" = "--first" ]; then
@@ -56,6 +59,6 @@ echo
 echo "Deployment completed. Check from the server:  curl -sI http://127.0.0.1:\${WEB_PORT:-8093}/accounts/login/"
 if [ -n "$DB_BACKUP" ]; then
     echo "Backup from before this deployment: $DB_BACKUP"
-    echo "To roll back the code:    git checkout \$(cat ${DB_BACKUP%_db.sql.gz}_commit.txt) && docker compose build cld-web && docker compose up -d"
+    echo "To roll back the code:    git checkout \$(cat ${DB_BACKUP%_db.sql.gz}_commit.txt) && docker compose build cld-web  # cld-worker and cld-beat use the same image && docker compose up -d"
     echo "To restore the database:  ./restore-cld.sh $DB_BACKUP"
 fi

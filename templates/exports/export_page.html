@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block title %}Exports &amp; dictionary{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-0">Exports &amp; data dictionary</h1>
+    <div class="small text-muted">{{ total }} participant{{ total|pluralize }} · one row per participant · exports are kept for {{ hours }} hours and only you can download yours</div>
+  </div>
+</div>
+
+{% if can_export %}
+{% if not can.export_identifiable %}
+<div class="alert alert-info py-2 small">Your role receives <strong>de-identified</strong> exports: hospital IDs and phone numbers are removed. Participants are identified by Study ID only.</div>
+{% endif %}
+<div class="card mb-3"><div class="card-body">
+  <div class="row g-3 align-items-end">
+    <div class="col-sm-6 col-lg-3">
+      <label for="exp-mode" class="form-label fw-semibold mb-1">Values</label>
+      <select id="exp-mode" class="form-select form-select-sm">{% for value, label in modes.items %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+    </div>
+    <div class="col-sm-6 col-lg-2">
+      <label for="exp-format" class="form-label fw-semibold mb-1">Format</label>
+      <select id="exp-format" class="form-select form-select-sm">{% for value, label in formats.items %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select>
+    </div>
+    {% if can.export_identifiable %}
+    <div class="col-lg-3">
+      <div class="form-check mb-1">
+        <input class="form-check-input" type="checkbox" id="exp-identifiable">
+        <label class="form-check-label small" for="exp-identifiable">Include hospital IDs and phone numbers <span class="text-danger">(store securely)</span></label>
+      </div>
+    </div>
+    {% endif %}
+    <div class="col d-flex flex-wrap gap-2 justify-content-lg-end">
+      <button class="btn btn-sm btn-primary export-btn" data-dataset="all" title="Excel workbook with one sheet per section">
+        <span>Download all sections</span></button>
+      <button class="btn btn-sm btn-outline-primary export-btn" data-dataset="combined" title="Every section side by side on one sheet">
+        <span>All sections combined</span></button>
+      {% include 'exports/_codebook_menu.html' with key='all' label='Codebook (all sections)' %}
+    </div>
+    <div class="col-12 small text-muted">
+      <strong>Labels</strong>: readable answers (e.g. "Yes", "Grade II") with question labels as column names.
+      <strong>Codes</strong>: numeric values (e.g. 1, 0, 9) with variable names as column names, for Stata, R or SPSS; the codebook gives their meaning.
+      "Download all sections" is always Excel (one sheet per section). Every row starts with the Study ID, so section files can be joined.
+    </div>
+  </div>
+</div></div>
+{% else %}
+<div class="alert alert-info py-2 small">Your role can download the codebook and data dictionary. Data exports are for Investigators, Data Managers and Admins.</div>
+{% endif %}
+
+<div class="card mb-3"><div class="table-responsive">
+<table class="table table-hover mb-0 align-middle">
+  <thead class="table-light"><tr><th class="ps-3">Section</th><th class="text-center">Records</th><th class="text-end pe-3"></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td class="ps-3">{{ r.label }}{% if r.calculated %} <span class="badge text-bg-info">calculated</span>{% endif %}</td>
+    <td class="text-center"><span class="badge text-bg-secondary">{{ r.count }}</span></td>
+    <td class="text-end pe-3 text-nowrap">
+      <div class="d-inline-flex gap-2">
+        {% if can_export %}<button class="btn btn-sm btn-outline-primary export-btn" data-dataset="{{ r.key }}" {% if not r.count %}disabled{% endif %}><span>Download</span></button>{% endif %}
+        {% include 'exports/_codebook_menu.html' with key=r.key label='Codebook' %}
+      </div>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></div>
+
+{% if can_export %}
+<div class="card"><div class="card-body">
+  <h2 class="h6">Your exports (last {{ hours }} hours)</h2>
+  {% for job in recent %}
+    <div class="d-flex justify-content-between small border-bottom py-1">
+      <span>{{ job.file_name }} <span class="text-muted">· {{ job.rows }} row{{ job.rows|pluralize }}{% if job.identifiable %} · <span class="text-danger">identifiable</span>{% endif %}</span></span>
+      <a href="{% url 'exports:download' job.pk %}">Download again</a>
+    </div>
+  {% empty %}<p class="small text-muted mb-0">None yet.</p>{% endfor %}
+</div></div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if can_export %}
+<script>
+(function () {
+  const START_URL = "{% url 'exports:start' %}";
+  const CSRF = "{{ csrf_token }}";
+  // A queued export not picked up within this time means the background worker is down.
+  const QUEUE_TIMEOUT_MS = 30000;
+
+  function reset(btn, label) { btn.disabled = false; btn.querySelector('span').innerText = label; }
+
+  document.querySelectorAll('.export-btn').forEach(function (btn) {
+    const label = btn.querySelector('span').innerText;
+    btn.addEventListener('click', async function () {
+      const ident = document.getElementById('exp-identifiable');
+      const body = new URLSearchParams({
+        dataset: btn.dataset.dataset,
+        format: document.getElementById('exp-format').value,
+        mode: document.getElementById('exp-mode').value,
+        identifiable: ident && ident.checked ? '1' : '0',
+      });
+      btn.disabled = true;
+      btn.querySelector('span').innerText = 'Queued…';
+      let statusUrl;
+      try {
+        const r = await fetch(START_URL, {method: 'POST', body: body, headers: {'X-CSRFToken': CSRF}});
+        statusUrl = (await r.json()).status_url;
+        if (!statusUrl) throw new Error();
+      } catch (e) {
+        alert('Could not start the export.');
+        return reset(btn, label);
+      }
+      const queuedAt = Date.now();
+      const timer = setInterval(async function () {
+        try {
+          const d = await (await fetch(statusUrl)).json();
+          if (d.status === 'queued' && Date.now() - queuedAt > QUEUE_TIMEOUT_MS) {
+            clearInterval(timer);
+            alert('The export service is not responding, so the export could not start. Please contact the system administrator.');
+            reset(btn, label);
+          } else if (d.status === 'running') {
+            btn.querySelector('span').innerText = 'Exporting… ' + d.progress + '%';
+          } else if (d.status === 'done') {
+            clearInterval(timer);
+            btn.querySelector('span').innerText = 'Ready (' + d.rows + ' rows)';
+            window.location.href = d.file;
+            setTimeout(function () { reset(btn, label); }, 3000);
+          } else if (d.status === 'failed') {
+            clearInterval(timer);
+            alert('The export failed. Please try again or contact the data manager.');
+            reset(btn, label);
+          }
+        } catch (e) {
+          clearInterval(timer);
+          alert('Could not check the export status.');
+          reset(btn, label);
+        }
+      }, 1200);
+    });
+  });
+})();
+</script>
+{% endif %}
+{% endblock %}

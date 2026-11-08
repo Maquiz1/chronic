@@ -1,10 +1,29 @@
-# DCLD Study data management system (Django + MySQL).
+# DCLD Study data management system (Django + MySQL + Celery).
 #
 # On the Hostinger server (/opt/chronic), like ncd_penplus: the web container listens only on
-# 127.0.0.1:WEB_PORT (default 8093; penplus uses 8090, dimension 8091, odk-central 8092) and the host nginx forwards the domain to it
-# (docker/nginx-cld.conf); certbot adds HTTPS.
+# 127.0.0.1:WEB_PORT (default 8093; penplus uses 8090, dimension 8091, odk-central 8092) and the host nginx forwards
+# chronic.tamris.org to it (docker/nginx-cld.conf); certbot adds HTTPS.
+# cld-worker runs exports and emails in the background; cld-beat starts the scheduled tasks (edit them in
+# Django admin -> Periodic tasks, or see them in the app under Scheduled tasks).
 # On a laptop the same file works: open http://127.0.0.1:8093 (set DJANGO_DEBUG=true in .env).
-# Service names start with "cld-" so they are easy to tell apart in `docker ps`.
+
+x-app: &app
+  build: .
+  image: cld-study:latest
+  env_file: .env
+  environment:
+    DB_ENGINE: mysql
+    DB_HOST: cld-db
+    DB_PORT: "3306"
+    CELERY_BROKER_URL: redis://cld-redis:6379/0
+  volumes:
+    - sent_emails:/app/sent_emails
+  depends_on:
+    cld-db:
+      condition: service_healthy
+    cld-redis:
+      condition: service_started
+  restart: always
 
 services:
   cld-db:
@@ -24,22 +43,22 @@ services:
       retries: 30
     restart: always
 
+  cld-redis:
+    image: redis:7-alpine
+    restart: always
+
   cld-web:
-    build: .
-    image: cld-study:latest
-    env_file: .env
-    environment:
-      DB_ENGINE: mysql
-      DB_HOST: cld-db
-      DB_PORT: "3306"
-    volumes:
-      - sent_emails:/app/sent_emails
+    <<: *app
     ports:
       - "127.0.0.1:${WEB_PORT:-8093}:8000"
-    depends_on:
-      cld-db:
-        condition: service_healthy
-    restart: always
+
+  cld-worker:
+    <<: *app
+    command: celery -A config worker -l info --concurrency 2
+
+  cld-beat:
+    <<: *app
+    command: celery -A config beat -l info
 
 volumes:
   mysql_data:

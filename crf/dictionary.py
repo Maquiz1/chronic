@@ -251,3 +251,87 @@ def write(directory=None):
 
 if __name__ == '__main__':  # pragma: no cover
     print(write())
+
+
+# --- Codebook (PDF): what each variable and code means, matching the "Codes" export --------------------------------
+CODEBOOK_HEADER = ['Variable', 'Qn', 'Label', 'Type', 'Unit / limits', 'Code', 'Meaning']
+
+
+def codebook_rows(section=None):
+    """[(section title or None, row)] - a section title row starts each section."""
+    out = []
+    if section is None:
+        out.append(('Questionnaire header', None))
+        for f in spec.HEADER:
+            out.append((None, [f.name, f.qn, f.label, f.type, f.unit, '', '']))
+    for s in _in_scope(section):
+        out.append((f'Section {s.code}: {s.title}', None))
+        for f in s.fields:
+            if f.by_unit:
+                limits = '; '.join(f'{c["unit"]} {_range_text(c["hard"])}' for c in f.by_unit.values())
+            else:
+                limits = ' '.join(x for x in (f.unit, _range_text(f.hard)) if x)
+            skip = f' (asked if {spec.relevance_text(f)})' if f.relevant else ''
+            if f.type == 'select_multiple':
+                for code, label in spec.CHOICES[f.choices]:
+                    out.append((None, [f'{f.name}_{code}', f.qn, f'{f.label}: {label}{skip}', '0/1', '', '1 / 0',
+                                       'Ticked / not ticked']))
+            elif f.type == 'select_one':
+                for i, (code, label) in enumerate(spec.CHOICES[f.choices]):
+                    first = i == 0
+                    out.append((None, [f.name if first else '', f.qn if first else '', f'{f.label}{skip}' if first else '',
+                                       'code' if first else '', '', code, label]))
+            else:
+                out.append((None, [f.name, f.qn, f'{f.label}{skip}', f.type, limits, '', '']))
+        for d in spec.DERIVED:
+            if d.section == s.code:
+                out.append((None, [d.name, '', f'{d.label} (calculated: {d.calculation})', 'calculated',
+                                   ' '.join(x for x in (d.unit, d.range) if x), '', d.interpretation]))
+    return out
+
+
+# The built-in PDF fonts only cover Latin-1: replace the few characters outside it.
+PDF_REPLACEMENTS = {'⁹': '^9', '≥': '>=', '≤': '<=', '–': '-', '—': '-', '’': "'", '“': '"', '”': '"', '…': '...'}
+
+
+def pdf_text(value):
+    text = str(value)
+    for old, new in PDF_REPLACEMENTS.items():
+        text = text.replace(old, new)
+    return text
+
+
+def codebook_pdf(section=None):
+    from io import BytesIO
+
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+    from xml.sax.saxutils import escape
+
+    buffer = BytesIO()
+    styles = getSampleStyleSheet()
+    cell = styles['BodyText'].clone('cell', fontSize=7, leading=8.5)
+    head = styles['BodyText'].clone('head', fontSize=7.5, leading=9, textColor=colors.white)
+    scope = 'all sections' if section is None else f'Section {section}: {spec.SECTION_BY_CODE[section].title}'
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), topMargin=24, bottomMargin=24, leftMargin=24,
+                            rightMargin=24, title=f'DCLD codebook - {scope}')
+    data = [[Paragraph(h, head) for h in CODEBOOK_HEADER]]
+    style = [('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1f3864')),
+             ('GRID', (0, 0), (-1, -1), 0.25, colors.HexColor('#bbbbbb')),
+             ('VALIGN', (0, 0), (-1, -1), 'TOP')]
+    for title, row in codebook_rows(section):
+        if title:
+            data.append([Paragraph(f'<b>{escape(pdf_text(title))}</b>', cell)] + [''] * 6)
+            r = len(data) - 1
+            style += [('SPAN', (0, r), (-1, r)), ('BACKGROUND', (0, r), (-1, r), colors.HexColor('#d9e1f2'))]
+        else:
+            data.append([Paragraph(escape(pdf_text(v)), cell) for v in row])
+    table = Table(data, repeatRows=1, colWidths=[110, 34, 260, 52, 110, 40, 188])
+    table.setStyle(TableStyle(style))
+    doc.build([Paragraph(f'DCLD Study codebook - {escape(scope)}', styles['Title']),
+               Paragraph(f'Data dictionary version {spec.VERSION} ({spec.VERSION_DATE}). Codes match the "Codes" '
+                         'export; the Excel data dictionary has the full detail and open decisions.', styles['Normal']),
+               Spacer(1, 8), table])
+    return buffer.getvalue()

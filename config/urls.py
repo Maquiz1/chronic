@@ -15,5 +15,7 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('records/', include('crf.urls')),
     path('quality/', include('quality.urls')),
+    path('exports/', include('exports.urls')),
+    path('reports/', include('reports.urls')),
     path('django-admin/', admin.site.urls),
 ]

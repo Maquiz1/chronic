@@ -3,6 +3,7 @@
 Everything that differs between a laptop and the Hostinger server comes from environment variables (.env).
 """
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -35,9 +36,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.humanize',
     'simple_history',
+    'django_celery_beat',
     'accounts',
     'crf',
     'quality',
+    'exports',
+    'reports',
 ]
 
 MIDDLEWARE = [
@@ -132,6 +136,23 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'DCLD Study <no-reply@
 # --- Study ---
 STUDY_START_DATE = os.environ.get('STUDY_START_DATE', '')  # YYYY-MM-DD; interviews before it are flagged
 STUDY_ID_PREFIX = os.environ.get('STUDY_ID_PREFIX', 'CLD')
+
+# --- Background jobs (Celery worker + beat, Redis broker). Schedules live in the database (Django admin). ---
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://cld-redis:6379/0')
+CELERY_TASK_IGNORE_RESULT = True  # progress of exports is tracked in the database, not in Celery results
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_SERIALIZER = CELERY_RESULT_SERIALIZER = 'json'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+CELERY_WORKER_HIJACK_ROOT_LOGGER = False
+TESTING = len(sys.argv) > 1 and sys.argv[1] == 'test'
+if TESTING or env_bool('CELERY_TASK_ALWAYS_EAGER', False):
+    CELERY_TASK_ALWAYS_EAGER = True  # run tasks immediately (tests, or a laptop without Redis)
+    CELERY_TASK_EAGER_PROPAGATES = True
+    CELERY_BROKER_URL = 'memory://'
+
+EXPORT_FILE_HOURS = int(os.environ.get('EXPORT_FILE_HOURS', '24'))  # finished exports are deleted after this
+PENDING_REMINDER_DAYS = int(os.environ.get('PENDING_REMINDER_DAYS', '2'))  # remind about records older than this
 
 # --- HTTPS (server). Behind the host nginx, which sets X-Forwarded-Proto. ---
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

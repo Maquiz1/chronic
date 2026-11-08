@@ -1,0 +1,18 @@
+Hello {{ user.first_name|default:user.email }},
+{% if pending %}
+Records interviewed more than {{ days }} days ago that still have missing items:
+{% for x in pending %}  {{ x.p.study_id }} - {{ x.pct }}% complete, {{ x.missing }} missing{% if x.labs %}; lab pending: {{ x.labs|join:", " }}{% endif %}{% if x.not_started %}; sections not started: {{ x.not_started|join:", " }}{% endif %}
+    {{ x.url }}
+{% endfor %}
+If a result will never be available, tick "Not done / not available" so the record can be completed.
+All pending results: {{ pending_url }}
+{% endif %}{% if queries %}
+Open queries waiting for an answer:
+{% for q in queries %}  {{ q.participant.study_id }} (Section {{ q.section }}{% if q.field %}, {{ q.field_label }}{% endif %}): {{ q.message }}
+{% endfor %}{% endif %}{% if to_close %}
+Answered queries waiting for you to review and close:
+{% for q in to_close %}  {{ q.participant.study_id }} (Section {{ q.section }}): {{ q.response }}
+{% endfor %}{% endif %}{% if queries or to_close %}
+Queries: {{ queries_url }}
+{% endif %}
+This reminder is sent each weekday morning while something is waiting.

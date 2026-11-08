@@ -1,7 +1,7 @@
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 from django.db.models import Q
-from django.http import Http404, HttpResponse
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -14,8 +14,6 @@ from quality import checks
 from quality.models import DataQuery
 
 from . import derived, spec
-from .dictionary import build_workbook, dictionary_filename
-from .exports import export_workbook
 from .forms import ParticipantForm, QueryForm, section_form_class
 from .models import SECTION_MODELS, SECTION_RELATED, Participant
 
@@ -295,50 +293,3 @@ class HistoryView(RoleRequiredMixin, ParticipantMixin, TemplateView):
                 previous = record
         entries.sort(key=lambda e: e['date'], reverse=True)
         return {**super().get_context_data(**kwargs), 'participant': participant, 'entries': entries}
-
-
-class ExportView(RoleRequiredMixin, View):
-    action = ('export_deidentified', 'export_identifiable')
-
-    def get(self, request):
-        identifiable = request.GET.get('identifiable') == '1'
-        if identifiable and not user_can(request.user, 'export_identifiable'):
-            raise PermissionDenied
-        scope = request.GET.get('scope', 'combined')  # combined | sheets | a section code
-        if scope in ('combined', 'sheets'):
-            layout, section, part = scope, None, 'all_sections' if scope == 'combined' else 'by_section'
-        elif scope.upper() in spec.SECTION_BY_CODE:
-            layout, section = 'section', scope.upper()
-            part = f'section_{section}'
-        else:
-            raise Http404
-        wb = export_workbook(participants_with_sections(), identifiable=identifiable, layout=layout, section=section)
-        stamp = timezone.localtime().strftime('%Y%m%d_%H%M')
-        name = f'dcld_{part}_{"identifiable_" if identifiable else ""}{stamp}.xlsx'
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="{name}"'
-        wb.save(response)
-        return response
-
-
-class DictionaryView(RoleRequiredMixin, View):
-    action = 'view_data'
-
-    def get(self, request):
-        section = request.GET.get('section', '').upper() or None
-        if section is not None and section not in spec.SECTION_BY_CODE:
-            raise Http404
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="{dictionary_filename(section)}"'
-        build_workbook(section).save(response)
-        return response
-
-
-class ExportsPageView(RoleRequiredMixin, TemplateView):
-    """Exports for those allowed; everyone with data access can download the dictionary from here."""
-
-    action = 'view_data'
-    template_name = 'crf/exports.html'
-
-    def get_context_data(self, **kwargs):
-        return {**super().get_context_data(**kwargs), 'sections': spec.SECTIONS}

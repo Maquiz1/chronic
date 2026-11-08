@@ -10,3 +10,9 @@ gunicorn==23.0.0
 whitenoise==6.9.0
 # Excel exports and the data dictionary
 openpyxl==3.1.5
+# Background jobs: exports and scheduled report emails (Celery + Redis; schedules editable in Django admin)
+celery==5.5.3
+django-celery-beat==2.8.1
+redis==5.2.1
+# PDF codebook and report attachments
+reportlab==4.4.3

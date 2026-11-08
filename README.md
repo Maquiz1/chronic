@@ -20,10 +20,20 @@ Docker, hosted on the Hostinger server like ncd_penplus (see [DEPLOY.md](DEPLOY.
   in Section D but No in Section H, a creatinine that looks like the wrong unit), and queries: a Data Manager raises,
   the Data Clerk answers, the Data Manager closes. A Data Manager can verify and lock a finished record.
 - **Audit trail**: every change to every value, with who and when (Change history on the participant page).
-- **Exports**: Excel, one row per participant with coded values, scores and quality columns; with or without phone
-  numbers. Choose all sections combined on one sheet, all sections with one sheet per section, or a single section.
-- **Data dictionary**: `data_dictionary/DCLD_Data_Dictionary_v<version>.xlsx`, also downloadable in the app, either
-  complete or for a single section (`build_dictionary --section G`, or `--all-sections` for one file per section).
+- **Exports** (like herbal): one row per section with its record count, plus "all sections" (one sheet per section)
+  and "all sections combined" (one sheet). **Labels** (readable answers) or **Codes** (numbers, for Stata/R/SPSS),
+  **CSV** or **Excel**. They run in the background with a progress bar, are kept 24 hours, and only the person who
+  made one can download it. Hospital IDs and phone numbers only for Data Managers and Admins, when ticked.
+- **Codebook / data dictionary** per section or for all sections: Excel (full dictionary) or PDF (codebook).
+  `data_dictionary/DCLD_Data_Dictionary_v<version>.xlsx` is built with `build_dictionary` (`--section G`,
+  `--all-sections`).
+- **Scheduled tasks** (Celery beat, editable in Django admin; listed under *Scheduled tasks* for Admins, with
+  *Run now* and a log of sent emails):
+  - daily pending-work reminder (weekdays 07:00): Data Clerks get their own records with missing items and open
+    queries; Data Managers get all of them plus answered queries to close. Nothing is sent when nothing is waiting.
+  - weekly progress and data quality report (Monday 07:30) and monthly report (last day of the month), with a PDF,
+    to Data Managers, Investigators and Admins.
+  - hourly deletion of expired exports.
 
 ## One source for the CRF
 

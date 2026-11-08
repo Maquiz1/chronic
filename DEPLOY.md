@@ -6,8 +6,9 @@ Same server and approach as ncd_penplus (`31.97.187.66`). Project folder `/opt/c
 
 - Address: **https://chronic.tamris.org**.
   The host nginx forwards it to `127.0.0.1:8093` (penplus uses 8090, dimension 8091, ODK Central 8092).
-- Containers: `cld-db` (MySQL 8.4) and `cld-web` (gunicorn + WhiteNoise). Only `cld-web` has a port, and only on
-  127.0.0.1, so nothing is reachable from outside except through nginx and HTTPS.
+- Containers: `cld-db` (MySQL 8.4), `cld-redis`, `cld-web` (gunicorn + WhiteNoise), `cld-worker` (Celery: exports
+  and emails) and `cld-beat` (starts the scheduled tasks). Only `cld-web` has a port, and only on 127.0.0.1, so
+  nothing is reachable from outside except through nginx and HTTPS.
 - Data lives in the Docker volume `chronic_mysql_data`.
 
 ## First deployment
@@ -62,11 +63,20 @@ Daily backup (`crontab -e`):
 ```
 Copy backups off the server regularly.
 
+## Scheduled tasks
+
+`deploy-cld.sh` runs `setup_schedules`, which creates the daily reminder, weekly and monthly reports and export
+clean-up, and keeps any time or on/off change made in Django admin → Periodic tasks. Admins see them in the app under
+**Scheduled tasks**, with *Run now* and the list of emails sent. If exports stay at "Queued", the worker is down:
+`docker compose logs --tail 50 cld-worker` and `docker compose up -d cld-worker`.
+
 ## Useful commands
 
 ```bash
 docker compose ps
 docker compose logs -f cld-web
+docker compose logs -f cld-worker cld-beat
+docker compose restart cld-web cld-worker cld-beat     # after changing .env
 docker compose exec cld-web python manage.py shell
 docker compose exec cld-web python manage.py createsuperuser
 docker compose exec cld-db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysql -u root "$MYSQL_DATABASE"'
