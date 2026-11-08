@@ -1,6 +1,6 @@
 # Deploying the DCLD study system (Hostinger, Docker + MySQL)
 
-Same server and approach as ncd_penplus (`31.97.187.66`). Project folder `/opt/cld-study`.
+Same server and approach as ncd_penplus (`31.97.187.66`). Project folder `/opt/chronic`.
 
 ## How it fits on the server
 
@@ -8,13 +8,13 @@ Same server and approach as ncd_penplus (`31.97.187.66`). Project folder `/opt/c
   The host nginx forwards it to `127.0.0.1:8092` (penplus uses 8090, dimension 8091).
 - Containers: `cld-db` (MySQL 8.4) and `cld-web` (gunicorn + WhiteNoise). Only `cld-web` has a port, and only on
   127.0.0.1, so nothing is reachable from outside except through nginx and HTTPS.
-- Data lives in the Docker volume `cld-study_mysql_data`.
+- Data lives in the Docker volume `chronic_mysql_data`.
 
 ## First deployment
 
 ```bash
 ss -tlnp | grep ':8092 ' || echo "8092 is free"      # otherwise pick another WEB_PORT
-git clone git@github.com:Maquiz1/chronic.git /opt/cld-study && cd /opt/cld-study
+cd /opt && git clone git@github.com:Maquiz1/chronic.git && cd chronic
 cp .env.production.example .env
 nano .env        # DJANGO_SECRET_KEY, DB_PASSWORD, DB_ROOT_PASSWORD (openssl rand -base64 48), domain, email password
 chmod 600 .env
@@ -27,7 +27,7 @@ Check from the server: `curl -sI http://127.0.0.1:8092/accounts/login/` (a `301`
 1. DNS: an A record for the domain → `31.97.187.66` (check with `dig +short chronic.tamris.org`).
 2. As root:
    ```bash
-   cp /opt/cld-study/docker/nginx-cld.conf /etc/nginx/sites-available/chronic.tamris.org
+   cp /opt/chronic/docker/nginx-cld.conf /etc/nginx/sites-available/chronic.tamris.org
    ln -s /etc/nginx/sites-available/chronic.tamris.org /etc/nginx/sites-enabled/
    nginx -t && systemctl reload nginx
    certbot --nginx -d chronic.tamris.org
@@ -45,7 +45,7 @@ docker compose exec cld-web python manage.py sendtestemail you@example.org
 ## Updates
 
 ```bash
-cd /opt/cld-study && git pull && ./deploy-cld.sh
+cd /opt/chronic && git pull && ./deploy-cld.sh
 ```
 It backs up the database to `~/backups/cld-study`, builds the new image while the old one keeps serving, runs
 migrations and switches the container. It prints rollback and restore commands at the end.
@@ -58,7 +58,7 @@ migrations and switches the container. It prints rollback and restore commands a
 ```
 Daily backup (`crontab -e`):
 ```
-15 2 * * * cd /opt/cld-study && ./backup-cld.sh daily >> ~/backups/cld-study/backup.log 2>&1
+15 2 * * * cd /opt/chronic && ./backup-cld.sh daily >> ~/backups/cld-study/backup.log 2>&1
 ```
 Copy backups off the server regularly.
 

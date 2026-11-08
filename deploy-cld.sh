@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Deploy the DCLD study system on the Hostinger server (/opt/cld-study), same steps as ncd_penplus:
+# Deploy the DCLD study system on the Hostinger server (/opt/chronic), same steps as ncd_penplus:
 #   1. back up the database
 #   2. build the new image while the old site keeps serving
 #   3. migrate the database
