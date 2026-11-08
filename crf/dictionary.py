@@ -46,6 +46,11 @@ CHANGE_LOG = [
      'bleeding varices on OGD remain. Sections I (Child-Pugh) and J (MELD-Na) removed from the CRF: calculated. '
      'Transplant: Child-Pugh C, MELD-Na, Milan and "meets criteria" removed; calculated, plus a proposed outcome '
      '"transplant indicated" (D37). Decisions D04, D09-D12, D15, D20, D31, D34 answered; D36-D41 new.'),
+    ('0.2.1', '2026-11-08', 'Pre-go-live unit review (no questionnaire change). No unit choice at entry: values are '
+     'entered in the MNH laboratory units: total and direct bilirubin µmol/L, albumin g/L, creatinine µmol/L, BUN '
+     'mmol/L (unit columns G4a, G5a, G6a, G8a, G12a removed). Decimals as the MNH lab prints them: ALT, AST, GGT, ALP, '
+     'potassium, bilirubins and AFP 2 decimals; sodium and chloride 1 decimal (were whole numbers). Equivalent units '
+     'shown: ×10⁹/L (= K/µL), mmol/L (= mEq/L), U/L (= IU/L). Decisions D03 and D38 answered.'),
 ]
 
 # Issued versions are kept in data_dictionary/ (not in git; mounted read-only into the app on the server) and every
