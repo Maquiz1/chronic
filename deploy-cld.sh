@@ -53,7 +53,7 @@ fi
 echo
 docker compose ps
 echo
-echo "Deployment completed. Check from the server:  curl -sI http://127.0.0.1:\${WEB_PORT:-8092}/accounts/login/"
+echo "Deployment completed. Check from the server:  curl -sI http://127.0.0.1:\${WEB_PORT:-8093}/accounts/login/"
 if [ -n "$DB_BACKUP" ]; then
     echo "Backup from before this deployment: $DB_BACKUP"
     echo "To roll back the code:    git checkout \$(cat ${DB_BACKUP%_db.sql.gz}_commit.txt) && docker compose build cld-web && docker compose up -d"

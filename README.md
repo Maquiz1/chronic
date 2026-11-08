@@ -45,7 +45,7 @@ docker compose up -d --build
 docker compose exec cld-web python manage.py migrate
 docker compose exec cld-web python manage.py createsuperuser      # log in with this email
 ```
-Open http://127.0.0.1:8092. Emails (confirmation links, password resets) are written to files:
+Open http://127.0.0.1:8093. Emails (confirmation links, password resets) are written to files:
 `docker compose exec cld-web sh -c 'cat sent_emails/*'`.
 
 Without Docker (quick tests on SQLite):

@@ -5,7 +5,7 @@ Same server and approach as ncd_penplus (`31.97.187.66`). Project folder `/opt/c
 ## How it fits on the server
 
 - Address: **https://chronic.tamris.org**.
-  The host nginx forwards it to `127.0.0.1:8092` (penplus uses 8090, dimension 8091).
+  The host nginx forwards it to `127.0.0.1:8093` (penplus uses 8090, dimension 8091, ODK Central 8092).
 - Containers: `cld-db` (MySQL 8.4) and `cld-web` (gunicorn + WhiteNoise). Only `cld-web` has a port, and only on
   127.0.0.1, so nothing is reachable from outside except through nginx and HTTPS.
 - Data lives in the Docker volume `chronic_mysql_data`.
@@ -13,14 +13,14 @@ Same server and approach as ncd_penplus (`31.97.187.66`). Project folder `/opt/c
 ## First deployment
 
 ```bash
-ss -tlnp | grep ':8092 ' || echo "8092 is free"      # otherwise pick another WEB_PORT
+ss -tlnp | grep ':8093 ' || echo "8093 is free"      # otherwise pick another WEB_PORT
 cd /opt && git clone git@github.com:Maquiz1/chronic.git && cd chronic
 cp .env.production.example .env
 nano .env        # DJANGO_SECRET_KEY, DB_PASSWORD, DB_ROOT_PASSWORD (openssl rand -base64 48), domain, email password
 chmod 600 .env
 ./deploy-cld.sh --first          # asks for the first Admin account at the end
 ```
-Check from the server: `curl -sI http://127.0.0.1:8092/accounts/login/` (a `301` to HTTPS is normal).
+Check from the server: `curl -sI http://127.0.0.1:8093/accounts/login/` (a `301` to HTTPS is normal).
 
 ## Domain and HTTPS
 
