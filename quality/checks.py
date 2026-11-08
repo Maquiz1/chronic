@@ -225,8 +225,6 @@ def consistency_issues(values):
     # Answers that contradict each other.
     if v.get('asterixis') == 1 and v.get('hepatic_enceph') == 0:
         add(WARNING, 'F', 'asterixis', 'Asterixis present but hepatic encephalopathy absent.', 'asterixis')
-    if v.get('hepatic_enceph') == 1 and v.get('he_grade') == 0:
-        add(WARNING, 'F', 'he_grade', 'Hepatic encephalopathy "Present" with grade 0 (grade 0 means none).', 'he_grade0')
     if v.get('ascites') == 1 and v.get('img_ascites') == 0:
         add(WARNING, 'G', 'img_ascites', 'Ascites present on examination (F7) but not on imaging (G23).', 'ascites_img')
     if v.get('k_refractory_ascites') == 1 and v.get('ascites') == 0:

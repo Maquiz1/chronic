@@ -39,7 +39,6 @@ RULES = [
     # --- Consistency between answers ----------------------------------------------------------------------------
     ('hosp_id', 'error', 'Consistency', 'Header', 'MRN is missing (required).'),
     ('asterixis', 'warning', 'Consistency', 'F', 'Asterixis present but hepatic encephalopathy absent.'),
-    ('he_grade0', 'warning', 'Consistency', 'F', 'Hepatic encephalopathy "Present" with grade 0.'),
     ('ascites_img', 'warning', 'Consistency', 'G', 'Ascites on examination (F7) but not on imaging (G23).'),
     ('refractory', 'warning', 'Consistency', 'K', 'Refractory ascites (K2) but ascites absent on examination (F7).'),
     ('gib', 'warning', 'Consistency', 'F', 'Bleeding varices on OGD (H2) but no evidence of GI bleeding (F14).'),

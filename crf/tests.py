@@ -410,7 +410,7 @@ class ScoreTests(TestCase):
              'hepatic_enceph': 1, 'he_grade': 0, 'hbsag': 1, 'hbv': 0, 'albumin': Decimal('8'),
              'bilirubin': Decimal('34.2'), 'direct_bilirubin': Decimal('51'), 'bp_systolic': 90, 'bp_diastolic': 95}
         rules = {i.rule for i in checks.all_issues(v)}
-        self.assertIn('he_grade0', rules)
+        self.assertNotIn('he_grade0', rules)  # grade 0 accepted (D39)
         self.assertIn('hbsag_history', rules)
         self.assertIn('direct_bili', rules)  # 51 µmol/L = 3 mg/dL, above the total of 2 mg/dL
         self.assertIn('bp', rules)
