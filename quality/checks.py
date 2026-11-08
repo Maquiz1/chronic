@@ -1,6 +1,6 @@
 """Data quality: completeness per section, range checks and consistency checks.
 
-Nothing here blocks saving (impossible values are already refused by the form). The results feed the data
+Nothing here blocks saving (impossible numbers are refused by the form; dates are saved and only flagged here). The results feed the data
 quality pages, the participant page and the queries that Data Managers raise.
 """
 import datetime
@@ -170,6 +170,8 @@ def consistency_issues(values):
             add(ERROR, section, field, f'{label} {value:%d %b %Y} is before {floor:%Y}: check the year.', 'date_old')
     if interview and interview > today:
         add(ERROR, 'Header', 'interview_date', 'Date of interview is in the future.', 'date_future')
+    if admission and admission > today:
+        add(ERROR, 'Header', 'admission_date', 'Admission date is in the future.', 'date_future')
     if settings.STUDY_START_DATE and interview:
         start = datetime.date.fromisoformat(settings.STUDY_START_DATE)
         if interview < start:

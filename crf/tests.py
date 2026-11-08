@@ -461,15 +461,24 @@ class DateTests(TestCase):
         f = spec.FIELD_BY_NAME['discharge_date'][1]
         self.assertEqual(spec.relevance_text(f), '${outcome} = 1')
 
-    def test_impossible_dates_blocked(self):
-        r = self.client.post(self.url, {'outcome': '1', 'discharge_date': self.adm - datetime.timedelta(days=1)})
-        self.assertContains(r, 'cannot be before the admission date')
+    def test_impossible_dates_saved_and_flagged(self):
+        """Dates are never refused: they are saved, the user is told, and they appear under the date checks."""
+        before = self.adm - datetime.timedelta(days=1)
+        r = self.client.post(self.url, {'outcome': '1', 'discharge_date': before}, follow=True)
+        self.assertEqual(SECTION_MODELS['L'].objects.get().discharge_date, before)
+        self.assertContains(r, 'Saved, but check the dates')
         self.client.post(self.url, {'outcome': '2', 'death_date': self.adm + datetime.timedelta(days=1)})
-        r = self.client.post(reverse('crf:section', args=[self.p.pk, 'G']), {'lab_sample_date': self.adm + datetime.timedelta(days=3)})
-        self.assertContains(r, 'cannot be after the date of death')
-        r = self.client.post(reverse('crf:edit', args=[self.p.pk]), {'hospital_id': 'DT-001', 'interview_date': '2016-05-01',
-                                                                   'admission_date': '2016-04-01'})
-        self.assertContains(r, 'check the year')
+        self.client.post(reverse('crf:section', args=[self.p.pk, 'G']), {'lab_sample_date': self.adm + datetime.timedelta(days=3)})
+        self.client.post(reverse('crf:edit', args=[self.p.pk]), {'hospital_id': 'DT-001', 'interview_date': '2016-05-01',
+                                                               'admission_date': '2016-06-01'})
+        p = Participant.objects.get()
+        self.assertEqual(p.interview_date, datetime.date(2016, 5, 1))
+        rules = {i.rule for i in checks.all_issues(p.values())}
+        self.assertTrue({'lab_after_death', 'date_old', 'adm_after_int'} <= rules)
+        self.client.force_login(make_user('data_manager'))
+        r = self.client.get(reverse('quality:issues') + '?category=Dates&participant=CLD-0001')
+        self.assertContains(r, 'Laboratory sample is after the date of death')
+        self.assertContains(r, 'Admission date is after the interview date')
 
     def test_date_warnings_and_filter(self):
         self.client.post(self.url, {'outcome': '2', 'death_date': self.adm + datetime.timedelta(days=1), 'los_days': '9'})

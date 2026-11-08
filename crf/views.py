@@ -24,6 +24,15 @@ def participants_with_sections():
     return Participant.objects.select_related('interviewer', *SECTION_RELATED)
 
 
+def date_notice(request, participant, sections):
+    """After saving: say which dates look wrong. They are saved anyway and listed in Data quality > Dates."""
+    found = [i for i in checks.all_issues(Participant.objects.get(pk=participant.pk).values())
+             if i.category == 'Dates' and i.level == checks.ERROR and i.section in sections]
+    if found:
+        messages.error(request, 'Saved, but check the dates: ' + ' '.join(i.message for i in found)
+                       + ' Correct them, or a Data Manager will raise a query (Data quality > Automatic checks > Dates).')
+
+
 class DashboardView(RoleRequiredMixin, TemplateView):
     action = 'view_data'
     template_name = 'crf/dashboard.html'
@@ -100,6 +109,7 @@ class ParticipantCreateView(RoleRequiredMixin, CreateView):
         response = super().form_valid(form)
         messages.success(self.request, f'Participant {self.object.study_id} registered. Write this Study ID on the '
                                        f'paper questionnaire.')
+        date_notice(self.request, self.object, ['Header'])
         return response
 
     def get_success_url(self):
@@ -166,7 +176,9 @@ class ParticipantEditView(RoleRequiredMixin, ParticipantMixin, UpdateView):
 
     def form_valid(self, form):
         messages.success(self.request, 'Saved.')
-        return super().form_valid(form)
+        response = super().form_valid(form)
+        date_notice(self.request, self.object, ['Header', 'G', 'L'])
+        return response
 
     def get_success_url(self):
         return reverse('crf:detail', args=[self.object.pk])
@@ -231,6 +243,7 @@ class SectionEditView(RoleRequiredMixin, ParticipantMixin, TemplateView):
                                       'you can come back and complete them later.')
         else:
             messages.success(request, f'Section {code} saved and complete.')
+        date_notice(request, participant, [code, 'G'] if code == 'L' else [code])
         next_code = self.next_code(code)
         if 'save_next' in request.POST and next_code:
             return redirect('crf:section', pk=participant.pk, code=next_code)

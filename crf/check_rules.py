@@ -3,25 +3,26 @@ checks page (filter by category) and the "Data Checks" sheet of the data diction
 
 (rule id, level, category, section, rule)
 level: error = impossible or contradictory; warning = unusual, verify against the source.
-"Blocked" rules are refused at entry; the others are flagged after saving.
+"Blocked" rules (impossible numbers, missing units) are refused at entry; the others, including every date check,
+are saved and flagged afterwards so that a query can be raised.
 """
 
 DATE_FLOOR = '2020-01-01'  # any study date before this is treated as a mistyped year
 
 RULES = [
     # --- Dates --------------------------------------------------------------------------------------------------
-    ('date_future', 'error', 'Dates', 'Header', 'Date of interview is in the future (blocked at entry).'),
+    ('date_future', 'error', 'Dates', 'Header', 'Date of interview or admission is in the future.'),
     ('date_old', 'error', 'Dates', 'Any', f'A date is before {DATE_FLOOR}: the year is probably mistyped.'),
     ('date_start', 'warning', 'Dates', 'Header', 'Date of interview is before the study start date (STUDY_START_DATE).'),
     ('adm_missing', 'warning', 'Dates', 'Header', 'Admission date is missing (needed for length of stay and lab timing).'),
-    ('adm_after_int', 'error', 'Dates', 'Header', 'Admission date is after the interview date (blocked at entry).'),
+    ('adm_after_int', 'error', 'Dates', 'Header', 'Admission date is after the interview date.'),
     ('int_late', 'warning', 'Dates', 'Header', 'Interview more than 60 days after admission.'),
-    ('lab_future', 'error', 'Dates', 'G', 'Laboratory sample date is in the future (blocked at entry).'),
+    ('lab_future', 'error', 'Dates', 'G', 'Laboratory sample date is in the future.'),
     ('lab_early', 'warning', 'Dates', 'G', 'Laboratory sample more than 7 days before admission.'),
-    ('lab_after_death', 'error', 'Dates', 'G', 'Laboratory sample after the date of death (blocked at entry).'),
+    ('lab_after_death', 'error', 'Dates', 'G', 'Laboratory sample after the date of death.'),
     ('lab_after_discharge', 'warning', 'Dates', 'G', 'Laboratory sample after the date of discharge.'),
-    ('out_future', 'error', 'Dates', 'L', 'Date of discharge or death is in the future (blocked at entry).'),
-    ('out_before_adm', 'error', 'Dates', 'L', 'Date of discharge or death is before the admission date (blocked at entry).'),
+    ('out_future', 'error', 'Dates', 'L', 'Date of discharge or death is in the future.'),
+    ('out_before_adm', 'error', 'Dates', 'L', 'Date of discharge or death is before the admission date.'),
     ('disch_before_int', 'warning', 'Dates', 'L', 'Discharged before the interview date (interviewed after discharge?).'),
     ('death_before_int', 'warning', 'Dates', 'L', 'Date of death is before the interview date (information from relatives?).'),
     ('los_dates', 'warning', 'Dates', 'L', 'Length of stay (L1) differs by more than 1 day from the admission and discharge/death dates.'),
