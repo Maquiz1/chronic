@@ -6,15 +6,20 @@ Docker, hosted on the Hostinger server like ncd_penplus (see [DEPLOY.md](DEPLOY.
 
 ## What it does
 
-- **Accounts**: people register with their email, confirm it through a link, then an Admin gives them a role
-  (a Data Manager can approve Data Clerks and Investigators). Forgot password by email; change password on the profile.
-  Roles: **Data Clerk**, **Investigator**, **Data Manager**, **Admin**. The roles page in the app shows exactly
-  what each one can do. Investigators never see phone numbers.
+- **Accounts**: people can register themselves with their email (confirmation link, then approval), or an Admin /
+  Data Manager creates the account and the person gets a link to choose a password. Forgot password by email; change
+  password on the profile. A person can hold **several roles**: Data Clerk, Research Scientist / Investigator,
+  Data Manager, Admin. A Data Manager can give Data Clerk and Research Scientist / Investigator; an Admin can also
+  give Data Manager; only a superuser can create Admins. Investigators never see hospital IDs or phone numbers.
 - **CRF entry**: one page per questionnaire section (A-L). Nothing is mandatory: save what is known and come back
   when laboratory results arrive. Lab and imaging items can be ticked *Not done / not available*. Skip rules hide
   questions that do not apply and clear their answers. Impossible values are refused; results are entered in the
   unit on the lab slip (µmol/L or mg/dL, g/L or g/dL) and converted for the scores.
-- **Calculated**: BMI, Child-Pugh points/score/class, MELD and MELD-Na, APRI, K1 (Child-Pugh C), K2 (MELD-Na >= 15).
+- **Calculated**: BMI, Child-Pugh points/score/class, MELD and MELD-Na, APRI, HCC within Milan criteria, Child-Pugh C,
+  MELD-Na >= 15 and a proposed "transplant indicated" outcome (D37).
+- **Reports**: study progress (cards, weekly recruitment, completeness by section, Child-Pugh and MELD-Na charts, a
+  section table) and progress per participant (completeness bar, sections, missing items, checks, queries, scores),
+  filtered by interview date, with a PDF download. Missing items are shown in red everywhere.
 - **Data quality**: completeness per participant and section (following the skip rules), *pending results* grouped
   by test (e.g. everyone still waiting for an INR), automatic range and consistency checks (e.g. encephalopathy Yes
   in Section D but No in Section H, a creatinine that looks like the wrong unit), and queries: a Data Manager raises,

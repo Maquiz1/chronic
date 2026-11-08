@@ -17,7 +17,7 @@
 </div>
 <div class="card"><div class="table-responsive">
 <table class="table table-sm table-hover mb-0">
-  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>Hospital ID</th>{% endif %}<th>Interview</th><th>Interviewer</th><th>Sections <span class="text-muted small">(green complete, yellow incomplete, grey not started)</span></th><th class="text-end">Complete</th><th class="text-end">Missing</th></tr></thead>
+  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>Hospital ID</th>{% endif %}<th>Interview</th><th>Interviewer</th><th>Sections <span class="text-muted small">(green complete, red items missing, grey not started)</span></th><th class="text-end">Complete</th><th class="text-end">Missing</th></tr></thead>
   <tbody>
   {% for p, st in rows %}
   <tr>
@@ -26,7 +26,7 @@
     <td>{{ p.interview_date|date:"d M Y" }}</td><td class="small">{{ p.interviewer }}</td>
     <td>{% for s in st.sections %}{% if s.state != 'calculated' %}{% if can.enter_data and not p.locked %}<a class="sec-chip {{ s.state }}" href="{% url 'crf:section' p.pk s.code %}" title="{{ s.title }}: {{ s.answered }}/{{ s.expected }}">{{ s.code }}</a>{% else %}<span class="sec-chip {{ s.state }}" title="{{ s.title }}">{{ s.code }}</span>{% endif %}{% endif %}{% endfor %}</td>
     <td class="text-end"><span class="badge text-bg-{{ st.pct|pct_class }}">{{ st.pct }}%</span></td>
-    <td class="text-end">{{ st.missing_count }}</td>
+    <td class="text-end">{% if st.missing_count %}<span class="badge text-bg-danger">{{ st.missing_count }}</span>{% else %}<span class="text-success">0</span>{% endif %}</td>
   </tr>
   {% empty %}<tr><td colspan="7" class="text-muted p-3">No participants found.</td></tr>
   {% endfor %}

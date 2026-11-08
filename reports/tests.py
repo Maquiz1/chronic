@@ -20,7 +20,7 @@ from .tasks import send_pending_reminders, send_progress_report
 class ReportTests(TestCase):
     def setUp(self):
         self.clerk = make_user('data_clerk')
-        self.other_clerk = make_user('data_clerk', 'other@example.org')
+        self.other_clerk = make_user('data_clerk', email='other@example.org')
         self.dm = make_user('data_manager')
         self.inv = make_user('investigator')
         self.client.force_login(self.clerk)
@@ -81,3 +81,40 @@ class ReportTests(TestCase):
         task = PeriodicTask.objects.get(name__startswith='Daily pending')
         self.client.post(reverse('reports:run', args=[task.pk]))
         self.assertTrue(EmailLog.objects.filter(kind='pending_reminder').exists())
+
+
+class ReportPageTests(TestCase):
+    def setUp(self):
+        self.client.force_login(make_user('investigator'))
+        clerk = make_user('data_clerk')
+        c = self.client
+        self.client.force_login(clerk)
+        today = timezone.localdate()
+        for i, days in enumerate((1, 10, 40)):
+            c.post(reverse('crf:create'), {'hospital_id': f'RPT-{i}', 'interview_date': today - datetime.timedelta(days=days)})
+        p = Participant.objects.order_by('study_id').first()
+        c.post(reverse('crf:section', args=[p.pk, 'G']), {
+            'bilirubin': '72', 'bilirubin_unit': '1', 'albumin': '24', 'albumin_unit': '1', 'inr': '1.9',
+            'creatinine': '421', 'creatinine_unit': '1', 'sodium': '129'})
+        c.post(reverse('crf:section', args=[p.pk, 'F']), {'ascites': '1', 'ascites_grade': '1', 'hepatic_enceph': '0'})
+        self.client.force_login(make_user('investigator', email='inv2@example.org'))
+
+    def test_study_progress(self):
+        r = self.client.get(reverse('reports:study'))
+        self.assertEqual(r.status_code, 200)
+        d = r.context['d']
+        self.assertEqual(d['total'], 3)
+        self.assertEqual(dict(d['child_pugh'])['C'], 1)
+        self.assertEqual(sum(d['weekly_counts']), 3)
+        self.assertEqual(d['cumulative'][-1], 3)
+        self.assertEqual(r.context['charts']['sections']['labels'][0], 'A')
+        r = self.client.get(reverse('reports:study') + '?start=' + str(timezone.localdate() - datetime.timedelta(days=7)))
+        self.assertEqual(r.context['d']['total'], 1)
+
+    def test_patient_progress_and_pdf(self):
+        r = self.client.get(reverse('reports:patients') + '?show=missing&sort=missing')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(len(r.context['rows']), 3)
+        self.assertNotContains(r, 'RPT-0')  # investigators never see hospital IDs
+        r = self.client.get(reverse('reports:pdf'))
+        self.assertEqual(r.content[:4], b'%PDF')

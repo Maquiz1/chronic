@@ -10,6 +10,7 @@ from django.utils import timezone
 from openpyxl import load_workbook
 
 from accounts.models import User
+from accounts.roles import set_roles, user_can
 from quality import checks
 from quality.models import DataQuery
 
@@ -20,9 +21,12 @@ from .models import SECTION_MODELS, Participant
 PASSWORD = 'Liver-Study-2026!'
 
 
-def make_user(role, email=None):
-    return User.objects.create_user(email or f'{role}@example.org', PASSWORD, first_name=role.title(),
-                                    last_name='User', role=role, is_active=True, email_verified=True)
+def make_user(*roles, email=None):
+    """Active user holding the given roles: make_user('data_manager'), make_user('data_clerk', 'investigator')."""
+    user = User.objects.create_user(email or f'{"_".join(roles)}@example.org', PASSWORD, first_name=roles[0].title(),
+                                    last_name='User', is_active=True, email_verified=True)
+    set_roles(user, roles)
+    return user
 
 
 class AccountsFlowTests(TestCase):
@@ -50,9 +54,9 @@ class AccountsFlowTests(TestCase):
         self.client.force_login(admin)
         self.client.post(reverse('accounts:user_edit', args=[user.pk]), {
             'first_name': 'Asha', 'last_name': 'M', 'phone': '', 'institution': 'MUHAS', 'position': 'Resident',
-            'role': 'data_clerk', 'is_active': 'on'})
-        user.refresh_from_db()
-        self.assertEqual(user.role, 'data_clerk')
+            'roles': ['data_clerk'], 'is_active': 'on'})
+        user = User.objects.get(pk=user.pk)
+        self.assertEqual(user.role_codes, {'data_clerk'})
         self.assertEqual(mail.outbox[-1].to, [user.email])
         self.client.force_login(user)
         self.assertEqual(self.client.get(reverse('crf:list')).status_code, 200)
@@ -75,12 +79,54 @@ class AccountsFlowTests(TestCase):
         dm = make_user('data_manager')
         pending = User.objects.create_user('new@example.org', PASSWORD, first_name='N', last_name='U', is_active=True)
         self.client.force_login(dm)
-        self.client.post(reverse('accounts:user_edit', args=[pending.pk]), {
-            'first_name': 'N', 'last_name': 'U', 'role': 'admin', 'is_active': 'on'})
-        pending.refresh_from_db()
-        self.assertEqual(pending.role, '')
+        r = self.client.post(reverse('accounts:user_edit', args=[pending.pk]), {
+            'first_name': 'N', 'last_name': 'U', 'roles': ['admin'], 'is_active': 'on'})
+        self.assertContains(r, 'is not one of the available choices')
+        self.assertEqual(User.objects.get(pk=pending.pk).role_codes, set())
         admin = make_user('admin')
         self.assertEqual(self.client.get(reverse('accounts:user_edit', args=[admin.pk])).status_code, 403)
+        other_dm = make_user('data_manager', email='dm2@example.org')
+        self.assertEqual(self.client.get(reverse('accounts:user_edit', args=[other_dm.pk])).status_code, 403)
+
+    def test_multiple_roles_combine_permissions(self):
+        both = make_user('data_clerk', 'investigator')
+        self.assertEqual(both.role_codes, {'data_clerk', 'investigator'})
+        self.assertTrue(user_can(both, 'enter_data'))           # from Data Clerk
+        self.assertTrue(user_can(both, 'export_deidentified'))  # from Investigator
+        self.assertFalse(user_can(both, 'raise_query'))
+        self.assertEqual(both.role_labels, 'Data Clerk, Research Scientist / Investigator')
+
+    @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_who_can_create_whom(self):
+        url = reverse('accounts:user_create')
+        data = {'first_name': 'New', 'last_name': 'Person', 'phone': '', 'institution': '', 'position': ''}
+        self.client.force_login(make_user('data_manager'))
+        r = self.client.get(url)
+        self.assertContains(r, 'Research Scientist / Investigator')
+        self.assertNotContains(r, 'value="data_manager"')
+        r = self.client.post(url, {**data, 'email': 'a@example.org', 'roles': ['data_manager']})
+        self.assertFalse(User.objects.filter(email='a@example.org').exists())
+        self.client.post(url, {**data, 'email': 'b@example.org', 'roles': ['data_clerk', 'investigator']})
+        created = User.objects.get(email='b@example.org')
+        self.assertEqual(created.role_codes, {'data_clerk', 'investigator'})
+        # The new person chooses a password from the email, then logs in
+        path = re.search(r'/accounts/reset/\S+/', mail.outbox[-1].body).group(0)
+        r = self.client.get(path, follow=True)
+        self.client.logout()
+        r = self.client.get(path, follow=True)
+        self.client.post(r.redirect_chain[-1][0], {'new_password1': 'Chosen-Pass-2026!', 'new_password2': 'Chosen-Pass-2026!'})
+        self.assertTrue(self.client.login(email='b@example.org', password='Chosen-Pass-2026!'))
+        # Admin: can create Data Managers, not Admins
+        self.client.force_login(make_user('admin'))
+        self.client.post(url, {**data, 'email': 'c@example.org', 'roles': ['data_manager']})
+        self.assertEqual(User.objects.get(email='c@example.org').role_codes, {'data_manager'})
+        self.client.post(url, {**data, 'email': 'd@example.org', 'roles': ['admin']})
+        self.assertFalse(User.objects.filter(email='d@example.org').exists())
+        # Superuser: can create Admins
+        su = User.objects.create_superuser('root@example.org', PASSWORD, first_name='R', last_name='S')
+        self.client.force_login(su)
+        self.client.post(url, {**data, 'email': 'e@example.org', 'roles': ['admin']})
+        self.assertEqual(User.objects.get(email='e@example.org').role_codes, {'admin'})
 
 
 class EntryTests(TestCase):

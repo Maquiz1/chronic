@@ -1,5 +1,5 @@
 Hello {{ user.first_name }},
 
-Your {{ SITE_NAME }} account is approved with the role: {{ user.get_role_display }}.
+Your {{ SITE_NAME }} account is approved with the role(s): {{ user.role_labels }}.
 
 Log in here: {{ link }}

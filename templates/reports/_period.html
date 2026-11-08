@@ -1,0 +1,14 @@
+<form method="get" class="card mb-3"><div class="card-body py-2 d-flex flex-wrap align-items-end gap-2">
+  <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Period">
+    {% for label, s, e in presets %}
+    <a class="btn btn-outline-secondary {% if s == start and e == end %}active{% endif %}" href="?{% if s %}start={{ s|date:'Y-m-d' }}&end={{ e|date:'Y-m-d' }}{% endif %}{% if extra %}&{{ extra }}{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+  <div><label class="form-label small mb-0" for="p-start">From (interview date)</label>
+    <input type="date" class="form-control form-control-sm" id="p-start" name="start" value="{{ start|date:'Y-m-d' }}"></div>
+  <div><label class="form-label small mb-0" for="p-end">To</label>
+    <input type="date" class="form-control form-control-sm" id="p-end" name="end" value="{{ end|date:'Y-m-d' }}"></div>
+  {% for k, v in hidden %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+  <button class="btn btn-sm btn-primary">Apply</button>
+  <a class="btn btn-sm btn-outline-secondary ms-auto" href="{% url 'reports:pdf' %}?{% if start %}start={{ start|date:'Y-m-d' }}&{% endif %}{% if end %}end={{ end|date:'Y-m-d' }}{% endif %}">Download PDF report</a>
+</div></form>

@@ -12,11 +12,13 @@ from django.utils.http import urlsafe_base64_decode
 from django.views import View
 from django.views.generic import FormView, ListView, TemplateView, UpdateView
 
-from .emails import notify_approvers, send_approved_email, send_verification_email
-from .forms import EmailLoginForm, ProfileForm, RegistrationForm, StyledPasswordChangeForm, UserAdminForm
+from .emails import notify_approvers, send_account_created_email, send_approved_email, send_verification_email
+from .forms import (EmailLoginForm, ProfileForm, RegistrationForm, StyledPasswordChangeForm, UserAdminForm,
+                    UserCreateForm)
 from .mixins import RoleRequiredMixin
 from .models import User
-from .roles import ACTIONS, PERMISSIONS, ROLE_CHOICES, assignable_roles, user_can
+from .roles import (ACTIONS, GROUP_TO_ROLE, PERMISSIONS, ROLE_CHOICES, ROLE_LABELS, assignable_roles, can_manage,
+                    set_roles, users_with_roles)
 
 
 class LoginView(auth_views.LoginView):
@@ -102,42 +104,68 @@ class PasswordChangeView(auth_views.PasswordChangeView):
 
 
 # --- User management ------------------------------------------------------------------------------------------
+USER_ADMIN = ('approve_users', 'manage_users')
 
-def _can_manage(actor, target):
-    """Admins manage everyone. Data Managers only accounts without a role, Data Clerks and Investigators."""
-    if user_can(actor, 'manage_users'):
-        return True
-    if user_can(actor, 'approve_users'):
-        return not target.is_superuser and target.role in ('', 'data_clerk', 'investigator') and target != actor
-    return False
+
+def _pending(qs):
+    """Active accounts without any role (registered and confirmed, waiting for approval)."""
+    return qs.filter(is_active=True, is_superuser=False).exclude(groups__name__in=list(GROUP_TO_ROLE))
 
 
 class UserListView(RoleRequiredMixin, ListView):
-    action = ('approve_users', 'manage_users')
+    action = USER_ADMIN
     template_name = 'accounts/user_list.html'
     paginate_by = 50
 
     def get_queryset(self):
-        qs = User.objects.all()
+        qs = User.objects.prefetch_related('groups')
         q = self.request.GET.get('q', '').strip()
         if q:
             qs = qs.filter(Q(email__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q))
         status = self.request.GET.get('status')
         if status == 'pending':
-            qs = qs.filter(is_active=True, role='', is_superuser=False)
+            qs = _pending(qs)
         elif status == 'unconfirmed':
             qs = qs.filter(email_verified=False)
+        elif status in ROLE_LABELS:
+            qs = users_with_roles(qs, [status])
         return qs.order_by('-date_joined')
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx['pending_count'] = User.objects.filter(is_active=True, role='', is_superuser=False).count()
-        ctx['manageable'] = {u.pk for u in ctx['object_list'] if _can_manage(self.request.user, u)}
+        ctx['pending_count'] = _pending(User.objects.all()).count()
+        ctx['manageable'] = {u.pk for u in ctx['object_list'] if can_manage(self.request.user, u)}
+        ctx['roles'] = ROLE_CHOICES
+        ctx['assignable'] = assignable_roles(self.request.user)
         return ctx
 
 
+class UserCreateView(RoleRequiredMixin, FormView):
+    """Admins and Data Managers create accounts directly; the person receives a link to choose a password."""
+
+    action = USER_ADMIN
+    form_class = UserCreateForm
+    template_name = 'accounts/user_create.html'
+
+    def get_form_kwargs(self):
+        return {**super().get_form_kwargs(), 'allowed_roles': assignable_roles(self.request.user)}
+
+    def form_valid(self, form):
+        user = form.save(commit=False)
+        user.set_unusable_password()
+        user.is_active = True
+        user.email_verified = True  # the password link goes to this address; using it proves the email
+        user.approved_at, user.approved_by = timezone.now(), self.request.user
+        user.save()
+        set_roles(user, form.cleaned_data['roles'])
+        send_account_created_email(self.request, user, self.request.user)
+        messages.success(self.request, f'Account created for {user} ({user.role_labels}). An email with a link to '
+                                       f'choose a password was sent to {user.email}.')
+        return redirect('accounts:users')
+
+
 class UserEditView(RoleRequiredMixin, UpdateView):
-    action = ('approve_users', 'manage_users')
+    action = USER_ADMIN
     model = User
     form_class = UserAdminForm
     template_name = 'accounts/user_edit.html'
@@ -145,7 +173,7 @@ class UserEditView(RoleRequiredMixin, UpdateView):
 
     def get_object(self, queryset=None):
         target = get_object_or_404(User, pk=self.kwargs['pk'])
-        if not _can_manage(self.request.user, target):
+        if not can_manage(self.request.user, target):
             raise PermissionDenied
         return target
 
@@ -154,27 +182,29 @@ class UserEditView(RoleRequiredMixin, UpdateView):
 
     def form_valid(self, form):
         user = form.instance
-        newly_approved = form.cleaned_data['role'] and not form.initial.get('role')
-        if user == self.request.user and not form.cleaned_data['is_active']:
-            form.add_error('is_active', 'You cannot deactivate your own account.')
-            return self.form_invalid(form)
+        had_roles = bool(user.role_codes)
+        roles = form.cleaned_data['roles']
+        newly_approved = roles and not had_roles
         if newly_approved:
             user.approved_at = timezone.now()
             user.approved_by = self.request.user
         response = super().form_valid(form)
+        set_roles(user, roles)
         if newly_approved and user.is_active:
             send_approved_email(self.request, user)
-            messages.success(self.request, f'{user} is approved as {user.get_role_display()} and has been emailed.')
+            messages.success(self.request, f'{user} is approved as {user.role_labels} and has been emailed.')
         else:
             messages.success(self.request, f'{user} saved.')
         return response
 
 
 class ResendUserVerificationView(RoleRequiredMixin, View):
-    action = ('approve_users', 'manage_users')
+    action = USER_ADMIN
 
     def post(self, request, pk):
         user = get_object_or_404(User, pk=pk, email_verified=False)
+        if not can_manage(request.user, user):
+            raise PermissionDenied
         send_verification_email(request, user)
         messages.success(request, f'A new confirmation link was sent to {user.email}.')
         return redirect(reverse('accounts:users'))

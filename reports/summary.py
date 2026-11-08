@@ -112,3 +112,93 @@ def build_pdf(summary, title):
                         style=grid)]
     doc.build(story)
     return buffer.getvalue()
+
+
+MELD_BINS = [(0, 9, '< 10'), (10, 14, '10-14'), (15, 19, '15-19'), (20, 24, '20-24'), (25, 29, '25-29'),
+             (30, 99, '30+')]
+
+
+def progress_data(start=None, end=None):
+    """Everything the Reports pages show, for participants interviewed between start and end (all when blank)."""
+    from collections import OrderedDict
+
+    from django.conf import settings
+
+    from quality.models import DataQuery
+
+    qs = participants_with_sections()
+    if start:
+        qs = qs.filter(interview_date__gte=start)
+    if end:
+        qs = qs.filter(interview_date__lte=end)
+    open_q = Counter(DataQuery.objects.exclude(status=DataQuery.Status.CLOSED).values_list('participant_id', flat=True))
+    patients = []
+    for p in qs.order_by('interview_date', 'study_id'):
+        v = p.values()
+        st = checks.record_status(v)
+        issues = checks.all_issues(v)
+        patients.append({
+            'p': p, 'pct': st['pct'], 'missing': st['missing_count'], 'complete': st['complete'],
+            'sections': [s for s in st['sections'] if s['state'] != 'calculated'],
+            'errors': sum(1 for i in issues if i.level == checks.ERROR),
+            'warnings': sum(1 for i in issues if i.level == checks.WARNING),
+            'queries': open_q.get(p.pk, 0),
+            'cp_class': derived.cp_class(v), 'meld_na': derived.meld_na(v), 'lt': derived.lt_indicated(v),
+            'outcome': v.get('outcome'),
+        })
+    total = len(patients)
+
+    # Recruitment per week (Monday start), with no gaps between the first and last week.
+    weekly = OrderedDict()
+    if patients:
+        first = min(x['p'].interview_date for x in patients)
+        last = max(x['p'].interview_date for x in patients)
+        week = first - timedelta(days=first.weekday())
+        while week <= last:
+            weekly[week] = 0
+            week += timedelta(days=7)
+        for x in patients:
+            d = x['p'].interview_date
+            weekly[d - timedelta(days=d.weekday())] += 1
+    cumulative, running = [], 0
+    for n in weekly.values():
+        running += n
+        cumulative.append(running)
+
+    sections = []
+    for code in ENTRY_CODES:
+        states = [next(s for s in x['sections'] if s['code'] == code) for x in patients]
+        complete = sum(1 for s in states if s['state'] == 'complete')
+        missing_items = sum(len(s['missing']) for s in states)
+        sections.append({'code': code, 'title': spec.SECTION_BY_CODE[code].title, 'complete': complete,
+                         'incomplete': sum(1 for s in states if s['state'] == 'incomplete'),
+                         'not_started': sum(1 for s in states if s['state'] == 'not_started'),
+                         'missing_items': missing_items,
+                         'pct': round(sum(s['pct'] for s in states) / total) if total else 0})
+
+    cp = Counter(x['cp_class'] for x in patients)
+    meld_bins = [(label, sum(1 for x in patients if x['meld_na'] is not None and lo <= x['meld_na'] <= hi))
+                 for lo, hi, label in MELD_BINS]
+    lt = Counter(x['lt'] for x in patients)
+    outcome = Counter(x['outcome'] for x in patients)
+    target = getattr(settings, 'STUDY_TARGET', 0)
+    return {
+        'start': start, 'end': end, 'total': total, 'target': target,
+        'target_pct': min(100, round(100 * total / target)) if target else None,
+        'complete': sum(1 for x in patients if x['complete']),
+        'locked': sum(1 for x in patients if x['p'].locked),
+        'avg_pct': round(sum(x['pct'] for x in patients) / total) if total else 0,
+        'missing_items': sum(x['missing'] for x in patients),
+        'with_missing': sum(1 for x in patients if x['missing']),
+        'errors': sum(x['errors'] for x in patients), 'warnings': sum(x['warnings'] for x in patients),
+        'open_queries': sum(x['queries'] for x in patients),
+        'weekly_labels': [w.strftime('%d %b %Y') for w in weekly], 'weekly_counts': list(weekly.values()),
+        'cumulative': cumulative,
+        'sections': sections,
+        'child_pugh': [('A', cp.get('A', 0)), ('B', cp.get('B', 0)), ('C', cp.get('C', 0))],
+        'child_pugh_unknown': cp.get(None, 0),
+        'meld_bins': meld_bins, 'meld_unknown': sum(1 for x in patients if x['meld_na'] is None),
+        'lt_yes': lt.get(1, 0), 'lt_no': lt.get(0, 0), 'lt_unknown': lt.get(None, 0),
+        'discharged': outcome.get(1, 0), 'died': outcome.get(2, 0), 'outcome_unknown': outcome.get(None, 0),
+        'patients': patients,
+    }

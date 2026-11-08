@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}New user{% endblock %}
+{% block content %}
+<div class="row"><div class="col-md-8 col-lg-6">
+<div class="card"><div class="card-body">
+  <h1 class="h4">Create a user</h1>
+  <p class="small text-muted">The person receives an email with a link to choose their password, then logs in with their email. People can also register themselves from the login page and wait for approval.</p>
+  <form method="post" novalidate>{% csrf_token %}{% include '_form.html' %}
+    <button class="btn btn-primary">Create and send email</button>
+    <a class="btn btn-link" href="{% url 'accounts:users' %}">Cancel</a>
+  </form>
+</div></div>
+</div></div>
+{% endblock %}

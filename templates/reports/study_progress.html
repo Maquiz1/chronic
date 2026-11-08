@@ -1,0 +1,156 @@
+{% extends 'base.html' %}
+{% load crf_tags %}
+{% block title %}Study progress{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Study progress</h1>
+{% include 'reports/_period.html' %}
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-xl-3"><div class="card h-100"><div class="card-body">
+    <div class="text-muted small">Participants{% if start %} in period{% endif %}</div>
+    <div class="stat">{{ d.total }}</div>
+    {% if d.target %}<div class="small text-muted mt-1">of {{ d.target }} planned ({{ d.target_pct }}%)</div>
+      <div class="progress mt-1" style="height:6px" role="progressbar" aria-valuenow="{{ d.target_pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:{{ d.target_pct }}%"></div></div>
+    {% else %}<div class="small text-muted mt-1">Target not set (STUDY_TARGET)</div>{% endif %}
+  </div></div></div>
+  <div class="col-6 col-xl-3"><div class="card h-100"><div class="card-body">
+    <div class="text-muted small">Average completeness</div>
+    <div class="stat">{{ d.avg_pct }}%</div>
+    <div class="progress mt-2" style="height:6px" role="progressbar" aria-valuenow="{{ d.avg_pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-{{ d.avg_pct|pct_class }}" style="width:{{ d.avg_pct }}%"></div></div>
+    <div class="small text-muted mt-1">{{ d.complete }} complete · {{ d.locked }} verified &amp; locked</div>
+  </div></div></div>
+  <div class="col-6 col-xl-3"><div class="card h-100"><div class="card-body">
+    <div class="text-muted small">Missing items</div>
+    <div class="stat {% if d.missing_items %}missing-text{% else %}text-success{% endif %}">{{ d.missing_items }}</div>
+    <div class="small text-muted mt-1">in {{ d.with_missing }} participant{{ d.with_missing|pluralize }} · <a href="{% url 'quality:pending' %}">pending results</a></div>
+  </div></div></div>
+  <div class="col-6 col-xl-3"><div class="card h-100"><div class="card-body">
+    <div class="text-muted small">Data checks &amp; queries</div>
+    <div class="stat">{{ d.open_queries }}</div>
+    <div class="small text-muted mt-1">open queries · {{ d.errors }} error{{ d.errors|pluralize }}, {{ d.warnings }} warning{{ d.warnings|pluralize }}</div>
+  </div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body">
+    <div class="text-muted small">Transplant indicated <span class="text-muted">(proposed, D37)</span></div>
+    <div class="stat">{{ d.lt_yes }}</div><div class="small text-muted mt-1">{{ d.lt_no }} not indicated · {{ d.lt_unknown }} not yet known</div>
+  </div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body">
+    <div class="text-muted small">Child-Pugh class C</div>
+    <div class="stat">{{ d.child_pugh.2.1 }}</div><div class="small text-muted mt-1">{{ d.child_pugh_unknown }} not yet calculable</div>
+  </div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body">
+    <div class="text-muted small">Discharged alive</div>
+    <div class="stat">{{ d.discharged }}</div><div class="small text-muted mt-1">{{ d.outcome_unknown }} outcome not recorded</div>
+  </div></div></div>
+  <div class="col-6 col-lg-3"><div class="card h-100"><div class="card-body">
+    <div class="text-muted small">Died</div>
+    <div class="stat">{{ d.died }}</div><div class="small text-muted mt-1">during the current admission</div>
+  </div></div></div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-xl-6"><div class="card h-100"><div class="card-body">
+    <h2 class="h6">Recruitment per week</h2>
+    <p class="small text-muted mb-2">Participants by interview week (Monday start). Total {{ d.total }}.</p>
+    <div class="chart-box"><canvas id="ch-weekly" aria-label="Participants recruited per week" role="img"></canvas></div>
+  </div></div></div>
+  <div class="col-xl-6"><div class="card h-100"><div class="card-body">
+    <h2 class="h6">Completeness by section</h2>
+    <p class="small text-muted mb-2">Participants per section: complete, items missing, not started.</p>
+    <div class="chart-box"><canvas id="ch-sections" aria-label="Completeness by section" role="img"></canvas></div>
+  </div></div></div>
+  <div class="col-md-6"><div class="card h-100"><div class="card-body">
+    <h2 class="h6">Child-Pugh class</h2>
+    <p class="small text-muted mb-2">{{ d.child_pugh_unknown }} participant{{ d.child_pugh_unknown|pluralize }} not yet calculable (inputs missing).</p>
+    <div class="chart-box chart-sm"><canvas id="ch-cp" aria-label="Child-Pugh class distribution" role="img"></canvas></div>
+  </div></div></div>
+  <div class="col-md-6"><div class="card h-100"><div class="card-body">
+    <h2 class="h6">MELD-Na score</h2>
+    <p class="small text-muted mb-2">{{ d.meld_unknown }} participant{{ d.meld_unknown|pluralize }} not yet calculable. 15 or more counts toward transplant indication.</p>
+    <div class="chart-box chart-sm"><canvas id="ch-meld" aria-label="MELD-Na score distribution" role="img"></canvas></div>
+  </div></div></div>
+</div>
+
+<div class="card"><div class="card-body">
+  <h2 class="h6">Progress by section</h2>
+  <div class="table-responsive">
+  <table class="table table-sm align-middle mb-0">
+    <thead><tr><th>Section</th><th class="text-end">Complete</th><th class="text-end">Items missing</th><th class="text-end">Not started</th><th class="text-end">Missing items</th><th style="min-width:180px">Average completeness</th></tr></thead>
+    <tbody>
+    {% for s in d.sections %}
+    <tr>
+      <td><strong>{{ s.code }}</strong> {{ s.title }}</td>
+      <td class="text-end">{{ s.complete }}</td>
+      <td class="text-end">{% if s.incomplete %}<span class="missing-text">{{ s.incomplete }}</span>{% else %}0{% endif %}</td>
+      <td class="text-end">{{ s.not_started }}</td>
+      <td class="text-end">{% if s.missing_items %}<a class="missing-text" href="{% url 'quality:pending' %}?section={{ s.code }}">{{ s.missing_items }}</a>{% else %}<span class="text-success">0</span>{% endif %}</td>
+      <td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:8px" role="progressbar" aria-valuenow="{{ s.pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-{{ s.pct|pct_class }}" style="width:{{ s.pct }}%"></div></div><span class="small" style="min-width:2.5rem">{{ s.pct }}%</span></div></td>
+    </tr>
+    {% empty %}<tr><td colspan="6" class="text-muted">No participants in this period.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <a class="btn btn-sm btn-outline-primary mt-3" href="{% url 'reports:patients' %}{% if start %}?start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}{% endif %}">Progress per participant →</a>
+</div></div>
+{{ charts|json_script:"chart-data" }}
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+  if (!window.Chart) return;
+  const data = JSON.parse(document.getElementById('chart-data').textContent);
+  // Reference palette (dataviz skill): one series hue, an ordinal ramp, and fixed status colours.
+  const C = {series: '#2a78d6', ramp: ['#86b6ef', '#2a78d6', '#104281'], good: '#0ca30c', critical: '#d03b3b',
+             muted: '#c3c2b7', grid: '#e1e0d9', axis: '#898781', ink: '#52514e', surface: '#ffffff'};
+  Chart.defaults.font.family = 'system-ui, -apple-system, "Segoe UI", sans-serif';
+  Chart.defaults.color = C.ink;
+  Chart.defaults.maintainAspectRatio = false;
+  const axes = function (stacked, horizontal) {
+    const value = {beginAtZero: true, stacked: stacked, grid: {color: C.grid}, border: {display: false},
+                   ticks: {precision: 0, color: C.axis}};
+    const cat = {stacked: stacked, grid: {display: false}, border: {color: C.muted}, ticks: {color: C.axis}};
+    return horizontal ? {x: value, y: cat} : {x: cat, y: value};
+  };
+  const bar = {borderRadius: 4, borderSkipped: 'start', borderColor: C.surface, borderWidth: 2, maxBarThickness: 36};
+
+  new Chart(document.getElementById('ch-weekly'), {
+    type: 'bar',
+    data: {labels: data.weekly.labels, datasets: [Object.assign({label: 'Participants', data: data.weekly.counts,
+      backgroundColor: C.series}, bar)]},
+    options: {scales: axes(false, false), plugins: {legend: {display: false},
+      tooltip: {callbacks: {title: function (i) { return 'Week of ' + i[0].label; },
+        afterLabel: function (i) { return 'Total so far: ' + data.weekly.cumulative[i.dataIndex]; }}}}}
+  });
+
+  new Chart(document.getElementById('ch-sections'), {
+    type: 'bar',
+    data: {labels: data.sections.labels, datasets: [
+      Object.assign({label: 'Complete', data: data.sections.complete, backgroundColor: C.good}, bar),
+      Object.assign({label: 'Items missing', data: data.sections.incomplete, backgroundColor: C.critical}, bar),
+      Object.assign({label: 'Not started', data: data.sections.not_started, backgroundColor: C.muted}, bar)]},
+    options: {indexAxis: 'y', scales: axes(true, true), interaction: {mode: 'index', axis: 'y', intersect: false},
+      plugins: {legend: {position: 'bottom', labels: {boxWidth: 12, boxHeight: 12}},
+        tooltip: {callbacks: {title: function (i) { return 'Section ' + i[0].label + ': ' + data.sections.titles[i[0].dataIndex]; }}}}}
+  });
+
+  new Chart(document.getElementById('ch-cp'), {
+    type: 'bar',
+    data: {labels: data.child_pugh.labels.map(function (l) { return 'Class ' + l; }),
+      datasets: [Object.assign({label: 'Participants', data: data.child_pugh.counts, backgroundColor: C.ramp}, bar)]},
+    options: {scales: axes(false, false), plugins: {legend: {display: false}}}
+  });
+
+  new Chart(document.getElementById('ch-meld'), {
+    type: 'bar',
+    data: {labels: data.meld.labels, datasets: [Object.assign({label: 'Participants', data: data.meld.counts,
+      backgroundColor: C.series}, bar)]},
+    options: {scales: axes(false, false), plugins: {legend: {display: false}}}
+  });
+})();
+</script>
+{% endblock %}

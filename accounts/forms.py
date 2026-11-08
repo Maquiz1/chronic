@@ -4,7 +4,6 @@ from django.contrib.auth.forms import (AuthenticationForm, PasswordChangeForm, P
 
 from .models import User
 from .widgets import BootstrapFormMixin
-from .roles import ROLE_CHOICES
 
 
 class EmailLoginForm(BootstrapFormMixin, AuthenticationForm):
@@ -52,26 +51,56 @@ class ProfileForm(BootstrapFormMixin, forms.ModelForm):
         fields = ['first_name', 'last_name', 'phone', 'institution', 'position']
 
 
-class UserAdminForm(BootstrapFormMixin, forms.ModelForm):
-    """Used by Admins and Data Managers to approve an account, change its role or deactivate it."""
+class RolesFieldMixin:
+    """Adds a "roles" tick list limited to the roles the person editing may give."""
+
+    def setup_roles(self, allowed_roles, current=()):
+        allowed = [code for code, _ in allowed_roles]
+        self.fields['roles'] = forms.MultipleChoiceField(
+            choices=allowed_roles, required=False, widget=forms.CheckboxSelectMultiple,
+            initial=[c for c in current if c in allowed],
+            help_text='Tick one or more. With no role the person can log in but sees no study data.')
+        self._allowed = set(allowed)
+
+    def clean_roles(self):
+        roles = self.cleaned_data.get('roles') or []
+        if set(roles) - self._allowed:
+            raise forms.ValidationError('You cannot give this role.')
+        return roles
+
+
+class UserAdminForm(RolesFieldMixin, BootstrapFormMixin, forms.ModelForm):
+    """Used by Admins and Data Managers to approve an account, change its roles or deactivate it."""
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'phone', 'institution', 'position', 'role', 'is_active']
+        fields = ['first_name', 'last_name', 'phone', 'institution', 'position', 'is_active']
         labels = {'is_active': 'Account active (can log in)'}
 
-    def __init__(self, *args, allowed_roles=None, **kwargs):
+    def __init__(self, *args, allowed_roles=(), **kwargs):
         super().__init__(*args, **kwargs)
-        allowed = [code for code, _ in (allowed_roles or [])]
-        self.fields['role'].choices = [('', 'No role (cannot use the system)')] + [
-            (code, label) for code, label in ROLE_CHOICES if code in allowed or code == self.instance.role]
-        self._allowed = set(allowed)
+        self.setup_roles(list(allowed_roles), self.instance.role_codes)
 
-    def clean_role(self):
-        role = self.cleaned_data['role']
-        if role and role != self.initial.get('role') and role not in self._allowed:
-            raise forms.ValidationError('You cannot give this role.')
-        return role
+
+class UserCreateForm(RolesFieldMixin, BootstrapFormMixin, forms.ModelForm):
+    """An Admin or Data Manager creates an account; the person gets an email to choose their password."""
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'phone', 'institution', 'position']
+
+    def __init__(self, *args, allowed_roles=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        for name in ('first_name', 'last_name'):
+            self.fields[name].required = True
+        self.setup_roles(list(allowed_roles))
+        self.fields['roles'].required = True
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip().lower()
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('An account with this email already exists.')
+        return email
 
 
 class StyledPasswordChangeForm(BootstrapFormMixin, PasswordChangeForm):

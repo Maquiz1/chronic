@@ -22,11 +22,11 @@
   <div class="card"><div class="card-body pt-2">
   {% for row in rows %}
     {% if row.group %}<div class="crf-group">{{ row.group }}</div>{% endif %}
-    <div class="crf-row row g-2 align-items-start" data-name="{{ row.spec.name }}" data-relevant="{{ row.relevant|tojson }}"
+    <div class="crf-row row g-2 align-items-start" data-name="{{ row.spec.name }}" data-relevant="{{ row.relevant|tojson }}" data-expected="{{ row.spec.expected|yesno:'1,0' }}"
          {% if row.by_unit %}data-by-unit="{{ row.by_unit|tojson }}" data-unit-field="{{ row.spec.unit_field }}"{% endif %}
          {% if row.spec.ref %}data-ref="{{ row.spec.ref|tojson }}"{% endif %}>
       <div class="col-md-5">
-        <label class="form-label mb-0" {% if row.bound %}for="{{ row.bound.id_for_label }}"{% endif %}><span class="qn">{{ row.spec.qn }}</span> {{ row.spec.label }}</label>
+        <label class="form-label mb-0" {% if row.bound %}for="{{ row.bound.id_for_label }}"{% endif %}><span class="qn">{{ row.spec.qn }}</span> {{ row.spec.label }}</label><span class="badge text-bg-danger missing-badge">missing</span>
         {% if row.spec.help %}<div class="form-text">{{ row.spec.help }}</div>{% endif %}
       </div>
       <div class="col-md-7">
@@ -71,6 +71,7 @@
   {% endif %}
 
   <div class="d-flex flex-wrap gap-2 mt-3 sticky-bottom bg-body-tertiary py-2">
+    <span id="missing-count" class="align-self-center me-2"></span>
     <button class="btn btn-primary" name="save">Save</button>
     {% if next_code %}<button class="btn btn-outline-primary" name="save_next">Save and go to Section {{ next_code }}</button>{% endif %}
     <a class="btn btn-link" href="{% url 'crf:detail' participant.pk %}">Cancel</a>
@@ -126,12 +127,33 @@
     }
   }
 
+  // A question is missing (red) when it applies, counts for completeness, is empty and not ticked "Not done".
+  function isEmpty(row) {
+    const inputs = Array.from(row.querySelectorAll('input, select, textarea')).filter(function (el) {
+      return !el.name.startsWith('nd__') && el.type !== 'hidden';
+    });
+    if (!inputs.length) return false;
+    return !inputs.some(function (el) {
+      if (el.type === 'radio' || el.type === 'checkbox') return el.checked;
+      return el.value.trim() !== '';
+    });
+  }
+
   function refresh() {
+    let missing = 0;
     rows.forEach(function (row) {
       const conds = JSON.parse(row.dataset.relevant || '[]');
-      row.classList.toggle('is-hidden', !conds.every(holds));
+      const hidden = !conds.every(holds);
+      row.classList.toggle('is-hidden', hidden);
       updateLimits(row);
+      const nd = row.querySelector('input[name^="nd__"]');
+      const isMissing = !hidden && row.dataset.expected === '1' && !(nd && nd.checked) && isEmpty(row);
+      row.classList.toggle('is-missing', isMissing);
+      if (isMissing) missing += 1;
     });
+    const counter = document.getElementById('missing-count');
+    if (counter) counter.textContent = missing ? missing + ' item' + (missing === 1 ? '' : 's') + ' missing (red)' : 'No items missing';
+    if (counter) counter.className = missing ? 'missing-text' : 'text-success fw-semibold';
   }
 
   form.addEventListener('input', refresh);

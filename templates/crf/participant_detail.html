@@ -40,7 +40,7 @@
             <td>{{ s.title }}</td>
             <td>{% state_badge s.state %}</td>
             <td class="small">{% if s.state != 'calculated' %}{{ s.answered }}/{{ s.expected }}{% if s.not_done %} <span class="text-muted">(+{{ s.not_done }} not done)</span>{% endif %}{% endif %}</td>
-            <td class="small text-muted">{% for f in s.missing|slice:":4" %}{{ f.qn }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if s.missing|length > 4 %} +{{ s.missing|length|add:"-4" }} more{% endif %}</td>
+            <td class="small missing-text">{% for f in s.missing|slice:":4" %}{{ f.qn }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if s.missing|length > 4 %} +{{ s.missing|length|add:"-4" }} more{% endif %}</td>
             <td class="text-end">{% if s.state != 'calculated' and can.enter_data and not participant.locked %}<a class="btn btn-sm btn-outline-primary py-0" href="{% url 'crf:section' participant.pk s.code %}">{% if s.state == 'not_started' %}Enter{% else %}Update{% endif %}</a>{% endif %}</td>
           </tr>
         {% endfor %}

@@ -1,0 +1,10 @@
+Hello {{ user.first_name }},
+
+{{ created_by }} created an account for you on {{ SITE_NAME }} with the role(s): {{ user.role_labels }}.
+
+Choose your password with this link (valid for 24 hours):
+
+{{ link }}
+
+Then log in with your email address: {{ login }}
+If the link has expired, use "Forgot password?" on the login page.

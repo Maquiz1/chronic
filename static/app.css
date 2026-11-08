@@ -60,7 +60,15 @@ input[type=number].form-control { max-width: 12rem; }
 .flag-H, .flag-L { font-weight: 700; color: #b02a37 !important; }
 .nd-box { font-size: .85rem; color: #6c757d; }
 .sec-chip { display: inline-block; width: 1.6rem; text-align: center; font-size: .75rem; padding: .15rem 0; border-radius: .2rem; margin-right: 2px; color: #fff; text-decoration: none; }
-.sec-chip.complete { background: #198754; } .sec-chip.incomplete { background: #e0a800; } .sec-chip.not_started { background: #adb5bd; }
+.sec-chip.complete { background: #198754; } .sec-chip.incomplete { background: #dc3545; } .sec-chip.not_started { background: #adb5bd; }
+/* Missing items are red everywhere */
+.missing-text { color: #dc3545 !important; font-weight: 600; }
+.crf-row.is-missing { border-left: 4px solid #dc3545; background: #fff5f5; }
+.crf-row.is-missing .form-label { color: #b02a37; }
+.missing-badge { display: none; margin-left: .4rem; }
+.crf-row.is-missing .missing-badge { display: inline-block; }
 .table-sm td, .table-sm th { vertical-align: middle; }
 .clear-link { font-size: .8rem; margin-left: .5rem; }
 @media (max-width: 576px) { .form-control, .form-select { max-width: 100%; } }
+.chart-box { position: relative; height: 280px; }
+.chart-box.chart-sm { height: 220px; }

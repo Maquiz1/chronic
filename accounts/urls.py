@@ -23,6 +23,7 @@ urlpatterns = [
         success_url=reverse_lazy('accounts:password_reset_complete')), name='password_reset_confirm'),
     path('reset/done/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
     path('users/', views.UserListView.as_view(), name='users'),
+    path('users/new/', views.UserCreateView.as_view(), name='user_create'),
     path('users/<int:pk>/', views.UserEditView.as_view(), name='user_edit'),
     path('users/<int:pk>/resend/', views.ResendUserVerificationView.as_view(), name='user_resend'),
     path('roles/', views.RolesView.as_view(), name='roles'),

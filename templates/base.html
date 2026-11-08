@@ -32,6 +32,13 @@
       <a class="side-link {% if ns == 'crf' and url == 'create' %}active{% endif %}" href="{% url 'crf:create' %}">
         <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New participant</a>
       {% endif %}
+      {% if can.view_data %}
+      <div class="nav-label">Reports</div>
+      <a class="side-link {% if ns == 'reports' and url == 'study' %}active{% endif %}" href="{% url 'reports:study' %}">
+        <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>Study progress</a>
+      <a class="side-link {% if ns == 'reports' and url == 'patients' %}active{% endif %}" href="{% url 'reports:patients' %}">
+        <svg viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>Participant progress</a>
+      {% endif %}
       {% if can.view_quality %}
       <div class="nav-label">Data quality</div>
       <a class="side-link {% if ns == 'quality' and url == 'overview' %}active{% endif %}" href="{% url 'quality:overview' %}">
@@ -54,7 +61,7 @@
         <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Users</a>
       <a class="side-link {% if ns == 'accounts' and url == 'roles' %}active{% endif %}" href="{% url 'accounts:roles' %}">
         <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Roles</a>
-      {% if can.manage_tasks %}<a class="side-link {% if ns == 'reports' %}active{% endif %}" href="{% url 'reports:schedules' %}">
+      {% if can.manage_tasks %}<a class="side-link {% if ns == 'reports' and url == 'schedules' %}active{% endif %}" href="{% url 'reports:schedules' %}">
         <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>Scheduled tasks</a>{% endif %}
       {% if user.is_superuser %}<a class="side-link" href="{% url 'admin:index' %}">
         <svg viewBox="0 0 24 24"><path d="M19.4 13c.04-.32.06-.66.06-1s-.02-.68-.06-1l2.1-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.49.49 0 0 0 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.32-.07.65-.07 1s.03.68.07 1l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64L19.4 13zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>Django admin</a>{% endif %}
@@ -63,7 +70,7 @@
     <div class="sidebar-user">
       <a href="{% url 'accounts:profile' %}" class="user-chip">
         <span class="avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</span>
-        <span class="text-truncate"><strong>{{ user }}</strong><small>{{ user.get_role_display|default:"Superuser" }}</small></span>
+        <span class="text-truncate"><strong>{{ user }}</strong><small>{{ user.role_labels }}</small></span>
       </a>
       <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-light w-100 mt-2">Log out</button></form>
     </div>

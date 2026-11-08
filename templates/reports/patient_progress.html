@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% load crf_tags %}
+{% block title %}Participant progress{% endblock %}
+{% block content %}
+<h1 class="h4 mb-3">Progress per participant</h1>
+{% include 'reports/_period.html' with extra='' %}
+<div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+  <div class="btn-group btn-group-sm">
+    {% for key, label in "all:All,missing:With missing items,complete:Complete"|split_pairs %}
+    <a class="btn btn-outline-secondary {% if show == key %}active{% endif %}" href="?show={{ key }}&sort={{ sort }}{% if start %}&start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+  <span class="small text-muted ms-2">Sort:</span>
+  <div class="btn-group btn-group-sm">
+    {% for key, label in "pct:Least complete first,missing:Most missing first,date:Interview date,id:Study ID"|split_pairs %}
+    <a class="btn btn-outline-secondary {% if sort == key %}active{% endif %}" href="?show={{ show }}&sort={{ key }}{% if start %}&start={{ start|date:'Y-m-d' }}&end={{ end|date:'Y-m-d' }}{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+  <span class="small text-muted ms-auto">{{ rows|length }} of {{ d.total }} participant{{ d.total|pluralize }}</span>
+</div>
+<div class="card"><div class="table-responsive">
+<table class="table table-sm table-hover align-middle mb-0">
+  <thead><tr>
+    <th>Study ID</th><th>Interview</th><th style="min-width:150px">Completeness</th>
+    <th>Sections <span class="small text-muted fw-normal">(green complete · red missing · grey not started)</span></th>
+    <th class="text-end">Missing</th><th class="text-end">Checks</th><th class="text-end">Queries</th>
+    <th>Child-Pugh</th><th class="text-end">MELD-Na</th><th>Transplant</th>
+  </tr></thead>
+  <tbody>
+  {% for x in rows %}
+  <tr>
+    <td class="text-nowrap"><a href="{% url 'crf:detail' x.p.pk %}" class="fw-semibold">{{ x.p.study_id }}</a>{% if x.p.locked %} <span title="Verified and locked">🔒</span>{% endif %}</td>
+    <td class="small text-nowrap">{{ x.p.interview_date|date:"d M Y" }}</td>
+    <td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:8px" role="progressbar" aria-valuenow="{{ x.pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-{{ x.pct|pct_class }}" style="width:{{ x.pct }}%"></div></div><span class="small" style="min-width:2.5rem">{{ x.pct }}%</span></div></td>
+    <td class="text-nowrap">{% for s in x.sections %}{% if can.enter_data and not x.p.locked %}<a class="sec-chip {{ s.state }}" href="{% url 'crf:section' x.p.pk s.code %}" title="{{ s.title }}: {{ s.answered }}/{{ s.expected }}{% if s.missing %}, missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}">{{ s.code }}</a>{% else %}<span class="sec-chip {{ s.state }}" title="{{ s.title }}">{{ s.code }}</span>{% endif %}{% endfor %}</td>
+    <td class="text-end">{% if x.missing %}<span class="badge text-bg-danger">{{ x.missing }}</span>{% else %}<span class="text-success">0</span>{% endif %}</td>
+    <td class="text-end small">{% if x.errors %}<span class="badge text-bg-danger" title="errors">{{ x.errors }}</span>{% endif %}{% if x.warnings %} <span class="badge text-bg-warning" title="warnings">{{ x.warnings }}</span>{% endif %}{% if not x.errors and not x.warnings %}0{% endif %}</td>
+    <td class="text-end">{{ x.queries }}</td>
+    <td>{{ x.cp_class|default:"—" }}</td>
+    <td class="text-end">{{ x.meld_na|default_if_none:"—" }}</td>
+    <td>{% if x.lt is None %}<span class="text-muted">—</span>{% elif x.lt %}<span class="badge text-bg-dark">Indicated</span>{% else %}No{% endif %}</td>
+  </tr>
+  {% empty %}<tr><td colspan="10" class="text-muted p-3">No participants.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></div>
+<p class="small text-muted mt-2">"Transplant indicated" is the proposed definition D37 (any of Child-Pugh C, MELD-Na ≥ 15, recurrent variceal bleeding, refractory ascites, recurrent encephalopathy, HCC within Milan); "—" means not yet known.</p>
+{% endblock %}

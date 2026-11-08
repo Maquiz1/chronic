@@ -32,7 +32,8 @@ def send_verification_email(request, user):
 
 def notify_approvers(request, new_user):
     from .models import User
-    recipients = list(User.objects.filter(is_active=True, role__in=['admin', 'data_manager'])
+    from .roles import ADMIN, DATA_MANAGER, users_with_roles
+    recipients = list(users_with_roles(User.objects.filter(is_active=True), [ADMIN, DATA_MANAGER])
                       .values_list('email', flat=True))
     recipients += list(User.objects.filter(is_active=True, is_superuser=True).values_list('email', flat=True))
     recipients = sorted(set(recipients) - {new_user.email})
@@ -45,3 +46,11 @@ def notify_approvers(request, new_user):
 def send_approved_email(request, user):
     _send('Your account is approved', 'emails/approved.txt',
           {'user': user, 'link': _absolute(reverse('login'))}, [user.email])
+
+
+def send_account_created_email(request, user, created_by):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = default_token_generator.make_token(user)
+    link = _absolute(reverse('accounts:password_reset_confirm', args=[uid, token]))
+    _send('Your account', 'emails/account_created.txt',
+          {'user': user, 'created_by': created_by, 'link': link, 'login': _absolute(reverse('login'))}, [user.email])

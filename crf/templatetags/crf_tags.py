@@ -9,7 +9,7 @@ register = template.Library()
 
 STATE = {
     'complete': ('success', 'Complete'),
-    'incomplete': ('warning', 'Incomplete'),
+    'incomplete': ('danger', 'Items missing'),
     'not_started': ('secondary', 'Not started'),
     'calculated': ('info', 'Calculated'),
 }
@@ -63,3 +63,9 @@ def pct_class(pct):
 def tojson(value):
     import json
     return json.dumps(value, default=str)
+
+
+@register.filter
+def split_pairs(value):
+    """"a:A,b:B" -> [('a', 'A'), ('b', 'B')], for small option lists in templates."""
+    return [tuple(item.split(':', 1)) for item in value.split(',')]

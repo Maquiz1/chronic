@@ -136,6 +136,7 @@ DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'DCLD Study <no-reply@
 # --- Study ---
 STUDY_START_DATE = os.environ.get('STUDY_START_DATE', '')  # YYYY-MM-DD; interviews before it are flagged
 STUDY_ID_PREFIX = os.environ.get('STUDY_ID_PREFIX', 'CLD')
+STUDY_TARGET = int(os.environ.get('STUDY_TARGET', '0') or 0)  # planned sample size; 0 = not set
 
 # --- Background jobs (Celery worker + beat, Redis broker). Schedules live in the database (Django admin). ---
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://cld-redis:6379/0')

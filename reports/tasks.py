@@ -4,12 +4,12 @@ from datetime import timedelta
 from celery import shared_task
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
-from django.db.models import Q
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 
 from accounts.models import User
+from accounts.roles import ADMIN, DATA_CLERK, DATA_MANAGER, INVESTIGATOR, user_roles, users_with_roles
 from crf.views import participants_with_sections
 from quality import checks
 from quality.models import DataQuery
@@ -28,7 +28,9 @@ def _active(qs):
 
 def report_recipients():
     """Data Managers, Investigators and Admins (and superusers)."""
-    return list(_active(User.objects.filter(Q(role__in=['data_manager', 'investigator', 'admin']) | Q(is_superuser=True))))
+    people = set(_active(users_with_roles(User.objects.all(), [DATA_MANAGER, INVESTIGATOR, ADMIN])))
+    people |= set(_active(User.objects.filter(is_superuser=True)))
+    return sorted(people, key=lambda u: u.email)
 
 
 def send_email(kind, user, subject, template, context, attachment=None):
@@ -108,8 +110,8 @@ def send_pending_reminders():
     open_q = list(DataQuery.objects.filter(status=DataQuery.Status.OPEN).select_related('participant'))
     answered_q = list(DataQuery.objects.filter(status=DataQuery.Status.ANSWERED).select_related('participant'))
     sent = 0
-    for user in _active(User.objects.filter(role__in=['data_clerk', 'data_manager'])):
-        if user.role == 'data_clerk':
+    for user in _active(users_with_roles(User.objects.all(), [DATA_CLERK, DATA_MANAGER])):
+        if DATA_MANAGER not in user_roles(user):
             mine = [x for x in pending if user.pk in (x['p'].created_by_id, x['p'].interviewer_id)]
             mine_ids = {x['p'].pk for x in mine} | {p.pk for p in participants
                                                      if user.pk in (p.created_by_id, p.interviewer_id)}
