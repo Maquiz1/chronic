@@ -1,9 +1,91 @@
-{% extends 'base.html' %}
-{% block content %}
-<div class="row justify-content-center mt-4"><div class="col-12 col-sm-10 col-md-7 col-lg-5 col-xl-4">
-  <div class="card"><div class="card-body p-4">
-    {% block card %}{% endblock %}
-  </div></div>
-  {% block below %}{% endblock %}
-</div></div>
-{% endblock %}
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Sign in{% endblock %} · {{ SITE_NAME }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="{% static 'app.css' %}" rel="stylesheet">
+  <link rel="icon" type="image/svg+xml" href="{% static 'img/livercare.svg' %}">
+</head>
+<body class="auth-body">
+<div class="container-fluid">
+  <div class="row auth-shell">
+
+    <!-- Brand panel (large screens) -->
+    <div class="col-lg-6 brand-panel d-none d-lg-flex align-items-center justify-content-center p-5">
+      <div class="brand-inner">
+        <div class="d-flex align-items-center gap-3 mb-5">
+          <img class="brand-logo-lg" src="{% static 'img/livercare.svg' %}" alt="" width="56" height="56">
+          <div>
+            <div class="fw-bold fs-4 lh-1">{{ SITE_NAME }}</div>
+            <small class="text-white-50">{{ SITE_SUBTITLE }}</small>
+          </div>
+        </div>
+        <h1 class="display-6 mb-3">Advanced liver disease,<br>recorded end to end.</h1>
+        <p class="lead mb-4">Clinical profile, disease severity and need for liver transplantation in patients with
+          decompensated chronic liver disease at Muhimbili National Hospital.</p>
+        <div class="row g-3">
+          <div class="col-6"><div class="feature h-100"><i class="bi bi-clipboard2-pulse"></i>
+            <div><div class="fw-semibold">Data entry</div><small>Fill each CRF section as results arrive; missing items stay visible in red.</small></div></div></div>
+          <div class="col-6"><div class="feature h-100"><i class="bi bi-calculator"></i>
+            <div><div class="fw-semibold">Severity scores</div><small>Child-Pugh, MELD-Na and Milan calculated automatically.</small></div></div></div>
+          <div class="col-6"><div class="feature h-100"><i class="bi bi-shield-check"></i>
+            <div><div class="fw-semibold">Data quality</div><small>Automatic checks, queries and verified, locked records.</small></div></div></div>
+          <div class="col-6"><div class="feature h-100"><i class="bi bi-bar-chart-line"></i>
+            <div><div class="fw-semibold">Reports</div><small>Study progress, exports for Stata, R or SPSS, and the data dictionary.</small></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form panel -->
+    <div class="col-lg-6 form-panel d-flex flex-column align-items-center justify-content-center px-4 py-5">
+      <div class="form-wrap">
+        <div class="d-flex d-lg-none align-items-center gap-2 mb-4">
+          <img class="brand-logo-lg" src="{% static 'img/livercare.svg' %}" alt="" width="44" height="44">
+          <div><div class="fw-bold fs-5 lh-1">{{ SITE_NAME }}</div><small class="text-secondary">{{ SITE_SUBTITLE }}</small></div>
+        </div>
+
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show auth-alert" role="alert">
+          {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
+
+        {% block card %}{% endblock %}
+        {% block below %}{% endblock %}
+
+        <div class="text-center auth-footer mt-5">&copy; {% now "Y" %} {{ SITE_NAME }} · {{ SITE_SUBTITLE }} · Muhimbili National Hospital</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+<script>
+  // Show / hide password buttons
+  document.querySelectorAll('.toggle-pass').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const input = document.getElementById(btn.dataset.target);
+      const show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.querySelector('i').className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+      btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    });
+  });
+  // Busy state on submit
+  document.querySelectorAll('form[data-busy]').forEach(function (form) {
+    form.addEventListener('submit', function () {
+      const btn = form.querySelector('button[type=submit]');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + form.dataset.busy; }
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# MNH Liver Study (DCLD) data management system (Django + MySQL + Celery).
+# LIVERCare (DCLD study) data management system (Django + MySQL + Celery).
 #
 # On the Hostinger server (/opt/chronic), like ncd_penplus: the web container listens only on
 # 127.0.0.1:WEB_PORT (default 8093; penplus uses 8090, dimension 8091, odk-central 8092) and the host nginx forwards

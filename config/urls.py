@@ -6,7 +6,7 @@ from django.contrib.auth import views as auth_views
 from accounts.views import LoginView
 from crf.views import DashboardView
 
-admin.site.site_header = 'MNH Liver Study administration'
+admin.site.site_header = 'LIVERCare administration'
 
 urlpatterns = [
     path('', DashboardView.as_view(), name='dashboard'),

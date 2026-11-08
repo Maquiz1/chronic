@@ -145,7 +145,7 @@ def build_workbook(section=None):
     ws.title = 'README'
     open_high = sum(1 for d in decisions if d[1] == 'High' and d[8] == 'Open')
     lines = [
-        ('MNH Liver Study (DCLD): Data Dictionary', None),
+        ('LIVERCare (DCLD study, Muhimbili National Hospital): Data Dictionary', None),
         (f'Version {spec.VERSION}, DRAFT, {spec.VERSION_DATE}. {open_high} High decisions open.', None),
         ('Contents', scope + ('' if section is None else '. Decisions, choices and derived values are limited to '
                               'this section; download "All sections" for the full workbook.')),
@@ -364,7 +364,7 @@ def codebook_pdf(section=None):
             data.append([Paragraph(escape(pdf_text(v)), cell) for v in row])
     table = Table(data, repeatRows=1, colWidths=[110, 34, 260, 52, 110, 40, 188])
     table.setStyle(TableStyle(style))
-    doc.build([Paragraph(f'MNH Liver Study (DCLD) codebook - {escape(scope)}', styles['Title']),
+    doc.build([Paragraph(f'LIVERCare (DCLD study) codebook - {escape(scope)}', styles['Title']),
                Paragraph(f'Data dictionary version {spec.VERSION} ({spec.VERSION_DATE}). Codes match the "Codes" '
                          'export; the Excel data dictionary has the full detail and open decisions.', styles['Normal']),
                Spacer(1, 8), table])

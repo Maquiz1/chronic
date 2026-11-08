@@ -1,22 +1,55 @@
 {% extends 'registration/_auth_base.html' %}
-{% block title %}Log in{% endblock %}
+{% block title %}Sign in{% endblock %}
 {% block card %}
-<h1 class="h4 mb-1">Log in</h1>
-<p class="text-muted small mb-3">Decompensated chronic liver disease study, Muhimbili National Hospital</p>
-<form method="post">{% csrf_token %}
-  {% include '_form.html' %}
+<h2 class="mb-1">Welcome back</h2>
+<p class="text-secondary mb-4">Sign in with your email. Data clerks, research scientists, investigators, data managers and admins all use this page.</p>
+
+{% if form.non_field_errors %}
+<div class="alert alert-danger d-flex gap-2 align-items-start auth-alert" role="alert">
+  <i class="bi bi-exclamation-circle-fill mt-1"></i>
+  <div>{% for error in form.non_field_errors %}{{ error }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</div>
+</div>
+{% endif %}
+
+<form method="post" novalidate data-busy="Signing in…">{% csrf_token %}
   <input type="hidden" name="next" value="{{ next }}">
-  <button class="btn btn-primary w-100">Log in</button>
+  <div class="mb-3">
+    <label for="id_username" class="field-label mb-2">Email</label>
+    <div class="input-icon">
+      <i class="bi bi-envelope"></i>
+      <input type="email" name="username" id="id_username" class="form-control{% if form.username.errors %} is-invalid{% endif %}" value="{{ form.username.value|default:'' }}" autocomplete="email" autofocus required>
+    </div>
+    {% for error in form.username.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+  </div>
+  <div class="mb-2">
+    <label for="id_password" class="field-label mb-2">Password</label>
+    <div class="input-icon">
+      <i class="bi bi-lock"></i>
+      <input type="password" name="password" id="id_password" class="form-control{% if form.password.errors %} is-invalid{% endif %}" autocomplete="current-password" required>
+      <button type="button" class="toggle-pass" data-target="id_password" aria-label="Show password"><i class="bi bi-eye"></i></button>
+    </div>
+    {% for error in form.password.errors %}<div class="text-danger small mt-1">{{ error }}</div>{% endfor %}
+  </div>
+  <div class="d-flex justify-content-end mb-4">
+    <a href="{% url 'accounts:password_reset' %}" class="link-brand small">Forgot password?</a>
+  </div>
+  <button type="submit" class="btn btn-brand w-100">Sign in <i class="bi bi-arrow-right ms-1"></i></button>
 </form>
-<div class="d-flex justify-content-between mt-3 small">
-  <a href="{% url 'accounts:password_reset' %}">Forgot password?</a>
-  <a href="{% url 'accounts:register' %}">Create an account</a>
+
+<div class="help-box mt-4">
+  <div class="d-flex gap-2">
+    <i class="bi bi-person-plus text-primary"></i>
+    <div class="small text-secondary">
+      <strong class="text-body">New to the study?</strong> <a class="link-brand" href="{% url 'accounts:register' %}">Create an account</a>
+      with your email. After you confirm it, an admin gives you a role. Your admin can also create the account for you.
+    </div>
+  </div>
 </div>
 {% endblock %}
 {% block below %}
-<details class="mt-3 small text-muted"><summary>Did not receive the confirmation email?</summary>
+<details class="mt-3 small text-secondary"><summary>Did not receive the confirmation email?</summary>
   <form method="post" action="{% url 'accounts:resend_verification' %}" class="d-flex gap-2 mt-2">{% csrf_token %}
-    <input type="email" name="email" class="form-control form-control-sm" placeholder="Your email" required>
+    <input type="email" name="email" class="form-control form-control-sm" placeholder="Your email" required aria-label="Your email">
     <button class="btn btn-sm btn-outline-secondary text-nowrap">Send again</button>
   </form>
 </details>
