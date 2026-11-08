@@ -29,11 +29,11 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
                    'admission_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
                    'hospital_id': forms.TextInput(attrs={'autofocus': True, 'autocomplete': 'off',
                                                          'style': 'text-transform: uppercase'})}
-        help_texts = {'hospital_id': 'Required. The patient\'s MNH registration number from the hospital system. '
+        help_texts = {'hospital_id': 'Required. The patient\'s MNH medical record number (MRN) from the hospital system. '
                                      'Visible only to Data Clerks, Data Managers and Admins.',
                       'phone_number': 'Optional. Visible only to Data Clerks, Data Managers and Admins.',
                       'admission_date': 'Can be added later.'}
-        error_messages = {'hospital_id': {'unique': 'This Hospital ID is already registered.'}}
+        error_messages = {'hospital_id': {'unique': 'This MRN is already registered.'}}
 
     def __init__(self, *args, show_identity=True, **kwargs):
         super().__init__(*args, **kwargs)
@@ -49,11 +49,11 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
         existing = Participant.all_objects.filter(hospital_id=value).exclude(pk=self.instance.pk).first()
         if existing and existing.is_deleted:
             raise forms.ValidationError(
-                f'Hospital ID {value} belongs to {existing.study_id}, which was deleted. Ask an Admin to restore it '
+                f'MRN {value} belongs to {existing.study_id}, which was deleted. Ask an Admin to restore it '
                 f'(Deleted records) instead of registering the patient again.')
         if existing:
             raise forms.ValidationError(format_html(
-                'Hospital ID {} is already registered as <a href="{}">{}</a>. Open that record instead of registering '
+                'MRN {} is already registered as <a href="{}">{}</a>. Open that record instead of registering '
                 'the patient again.', value, reverse('crf:detail', args=[existing.pk]), existing.study_id))
         return value
 

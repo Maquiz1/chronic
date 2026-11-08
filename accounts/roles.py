@@ -9,7 +9,7 @@ Who can give which roles:
   Superuser     -> all roles, including Admin
 People can also register themselves with their email; they get no role until someone gives them one.
 
-Only Data Clerks, Data Managers and Admins see hospital IDs and phone numbers.
+Only Data Clerks, Data Managers and Admins see MRNs and phone numbers.
 """
 
 DATA_CLERK = 'data_clerk'
@@ -30,7 +30,7 @@ GROUP_TO_ROLE = {label: code for code, label in ROLE_CHOICES}
 # Action -> description, shown on the roles page.
 ACTIONS = {
     'view_data': 'View participant records, reports and the data dictionary',
-    'view_identity': 'See hospital IDs and phone numbers',
+    'view_identity': 'See MRNs and phone numbers',
     'enter_data': 'Register participants and enter or update CRF sections',
     'view_quality': 'See data quality: missing fields, pending results, checks',
     'answer_query': 'Answer data queries',
@@ -38,8 +38,8 @@ ACTIONS = {
     'lock_record': 'Lock (verify) and unlock records',
     'delete_record': 'Delete a participant or one of its forms (soft delete: can be restored)',
     'restore_record': 'See deleted records and restore them',
-    'export_deidentified': 'Export data without hospital IDs or phone numbers',
-    'export_identifiable': 'Export data with hospital IDs and phone numbers',
+    'export_deidentified': 'Export data without MRNs or phone numbers',
+    'export_identifiable': 'Export data with MRNs and phone numbers',
     'view_audit': 'See the change history (audit trail)',
     'approve_users': 'Create and approve Data Clerks and Research Scientists / Investigators',
     'manage_users': 'Also create and manage Data Managers (Admins are created by a superuser)',

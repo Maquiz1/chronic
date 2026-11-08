@@ -153,16 +153,22 @@ class EntryTests(TestCase):
         r = self.client.post(reverse('crf:create'), {'interview_date': today})
         self.assertContains(r, 'This field is required')
         r = self.client.post(reverse('crf:create'), {'hospital_id': ' M10 - 20 - 30 ', 'interview_date': today})
-        self.assertContains(r, 'is already registered as')
+        self.assertContains(r, "is already registered as")
         self.assertContains(r, reverse('crf:detail', args=[self.p.pk]))
         r = self.client.post(reverse('crf:create'), {'hospital_id': '<b>', 'interview_date': today})
         self.assertContains(r, 'Use 3-30 letters')
         self.assertEqual(Participant.objects.count(), 1)
         self.client.post(reverse('crf:create'), {'hospital_id': 'M10-20-31', 'interview_date': today})
         self.assertEqual(Participant.objects.count(), 2)
-        r = self.client.get(reverse('crf:list') + '?q=20-31')
+        r = self.client.get(reverse('crf:list') + '?mrn=20-31')
         self.assertContains(r, 'CLD-0002')
         self.assertNotContains(r, 'CLD-0001')
+        self.assertContains(r, '<th>MRN</th>')
+        self.assertNotContains(r, 'Interviewer')
+        self.client.force_login(make_user('investigator'))
+        r = self.client.get(reverse('crf:list') + '?mrn=20-31')  # investigators cannot see or filter by MRN
+        self.assertContains(r, 'CLD-0001')
+        self.assertNotContains(r, '<th>MRN</th>')
 
     def test_partial_save_then_complete_later(self):
         # Only haemoglobin known today; INR not done; the rest pending.

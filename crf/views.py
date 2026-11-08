@@ -66,6 +66,9 @@ class ParticipantListView(RoleRequiredMixin, ListView):
             if user_can(self.request.user, 'view_identity'):
                 cond |= Q(phone_number__icontains=q) | Q(hospital_id__icontains=q)
             qs = qs.filter(cond)
+        mrn = self.request.GET.get('mrn', '').strip()
+        if mrn and user_can(self.request.user, 'view_identity'):
+            qs = qs.filter(hospital_id__icontains=mrn)
         if self.request.GET.get('locked') == '1':
             qs = qs.filter(locked=True)
         return qs

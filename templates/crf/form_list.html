@@ -9,7 +9,7 @@
   </nav>
 </div>
 <form class="d-flex flex-wrap gap-2 align-items-center mb-3" method="get">
-  <input class="form-control form-control-sm" style="width:14rem" name="q" value="{{ request.GET.q }}" placeholder="Study ID{% if can.view_identity %} or hospital ID{% endif %}">
+  <input class="form-control form-control-sm" style="width:14rem" name="q" value="{{ request.GET.q }}" placeholder="Study ID{% if can.view_identity %} or MRN{% endif %}">
   <select name="show" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
     <option value="all" {% if show == 'all' %}selected{% endif %}>All participants</option>
     <option value="incomplete" {% if show == 'incomplete' %}selected{% endif %}>Items missing</option>
@@ -21,7 +21,7 @@
 </form>
 <div class="card"><div class="table-responsive">
 <table class="table table-sm table-hover align-middle mb-0">
-  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>Hospital ID</th>{% endif %}<th>Interview</th><th>Status</th><th class="text-end">Answered</th><th class="text-end">Missing</th><th>Last saved</th><th class="text-end">Actions</th></tr></thead>
+  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>MRN</th>{% endif %}<th>Interview</th><th>Status</th><th class="text-end">Answered</th><th class="text-end">Missing</th><th>Last saved</th><th class="text-end">Actions</th></tr></thead>
   <tbody>
   {% for r in rows %}
   {% with p=r.p s=r.status %}

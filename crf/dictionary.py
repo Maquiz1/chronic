@@ -34,7 +34,7 @@ WRAP = Alignment(wrap_text=True, vertical='top')
 # Version history: add a line for every new version.
 CHANGE_LOG = [
     ('0.1', '2026-11-08', 'First draft from "questionnaire final.docx" and the MNH lab sheets (units1.jpeg, '
-     'units2.jpeg). Proposal not yet received. Later: Hospital ID added (H1a, D35).'),
+     'units2.jpeg). Proposal not yet received. Later: MRN added (H1a, D35).'),
     ('0.2', '2026-11-08', 'Updated to "questionnaire final_v0.2.docx". Sections re-lettered: Etiology D (was E), '
      'Comorbidities E (was F), Examination F (was D). Etiology: hepatitis B/C duration and treatment added; PBC, PSC, '
      'Wilson and haemochromatosis removed; alcohol units per week replaced by days drinking per week. Examination: blood '

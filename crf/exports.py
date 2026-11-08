@@ -60,7 +60,7 @@ def _header(code, mode, identifiable):
     lead = [('study_id', 'Study ID'), ('interview_date', 'Date of interview'),
             ('admission_date', 'Date of admission'), ('interviewer', 'Interviewer')]
     if identifiable:
-        lead += [('hospital_id', 'Hospital ID'), ('phone_number', 'Phone number')]
+        lead += [('hospital_id', 'MRN'), ('phone_number', 'Phone number')]
     columns, names = _part(code)
     crf = []
     for column, f, option in columns:
@@ -160,7 +160,7 @@ def notes_rows(key, mode, identifiable):
         ['Data dictionary version', spec.VERSION],
         ['Codes', 'See the codebook / data dictionary. Multiple-answer questions are one 0/1 column per option.'],
         ['Blank cells', 'Not entered yet, skipped by a skip rule, or marked "not done" (listed in the not done column).'],
-        ['Identifiable', 'Yes (hospital IDs and phone numbers): store securely' if identifiable
+        ['Identifiable', 'Yes (MRNs and phone numbers): store securely' if identifiable
          else 'No (no hospital IDs or phone numbers)'],
     ]
 

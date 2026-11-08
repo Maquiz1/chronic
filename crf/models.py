@@ -44,8 +44,8 @@ class ActiveManager(models.Manager):
 class Participant(SoftDeleteFields):
     study_id = models.CharField('Study ID', max_length=30, unique=True, editable=False)
     # Required by the form; nullable only so records made before this field existed can be migrated and then filled.
-    hospital_id = models.CharField('Hospital ID', max_length=30, unique=True, null=True,
-                                   help_text='MNH registration number of the patient (unique in the hospital system).')
+    hospital_id = models.CharField('MRN', max_length=30, unique=True, null=True,
+                                   help_text='MNH medical record number (MRN) of the patient, unique in the hospital system.')
     interview_date = models.DateField('Date of interview')
     admission_date = models.DateField('Date of admission', null=True, blank=True)
     phone_number = models.CharField('Patient phone number', max_length=30, blank=True)

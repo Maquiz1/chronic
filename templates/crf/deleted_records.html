@@ -6,7 +6,7 @@
 <h2 class="h6 mt-3">Participants</h2>
 <div class="card mb-4"><div class="table-responsive">
 <table class="table table-sm align-middle mb-0">
-  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>Hospital ID</th>{% endif %}<th>Deleted</th><th>By</th><th>Reason</th><th></th></tr></thead>
+  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>MRN</th>{% endif %}<th>Deleted</th><th>By</th><th>Reason</th><th></th></tr></thead>
   <tbody>
   {% for p in participants %}
   <tr><td class="fw-semibold">{{ p.study_id }}</td>{% if can.view_identity %}<td class="small">{{ p.hospital_id|default:"—" }}</td>{% endif %}

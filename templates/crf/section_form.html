@@ -5,7 +5,7 @@
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
   <div>
     <a href="{% if back %}{{ back }}{% else %}{% url 'crf:detail' participant.pk %}{% endif %}" class="text-decoration-none">&larr; {% if back %}Back{% else %}{{ participant }}{% endif %}</a>
-    <span class="text-muted small ms-2">{% if back %}{{ participant }}{% endif %}{% if can.view_identity and participant.hospital_id %}{% if back %} · {% endif %}Hospital ID {{ participant.hospital_id }}{% endif %}</span>
+    <span class="text-muted small ms-2">{% if back %}{{ participant }}{% endif %}{% if can.view_identity and participant.hospital_id %}{% if back %} · {% endif %}MRN {{ participant.hospital_id }}{% endif %}</span>
     <h1 class="h4 mb-0 mt-1">Section {{ section.code }}: {{ section.title }}</h1>
   </div>
   <nav class="d-flex flex-wrap gap-1">

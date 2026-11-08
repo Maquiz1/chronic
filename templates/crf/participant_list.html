@@ -5,7 +5,8 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
   <h1 class="h4 mb-0">Participants</h1>
   <form class="d-flex flex-wrap gap-2" method="get">
-    <input class="form-control form-control-sm" style="width:14rem" name="q" value="{{ request.GET.q }}" placeholder="Study ID{% if can.view_identity %}, hospital ID or phone{% endif %}">
+    <input class="form-control form-control-sm" style="width:11rem" name="q" value="{{ request.GET.q }}" placeholder="Study ID{% if can.view_identity %} or phone{% endif %}" aria-label="Search by Study ID">
+    {% if can.view_identity %}<input class="form-control form-control-sm" style="width:10rem" name="mrn" value="{{ request.GET.mrn }}" placeholder="MRN number" aria-label="Filter by MRN">{% endif %}
     <select name="status" class="form-select form-select-sm" style="width:auto">
       <option value="">All records</option>
       <option value="incomplete" {% if request.GET.status == 'incomplete' %}selected{% endif %}>Incomplete</option>
@@ -17,18 +18,18 @@
 </div>
 <div class="card"><div class="table-responsive">
 <table class="table table-sm table-hover mb-0">
-  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>Hospital ID</th>{% endif %}<th>Interview</th><th>Interviewer</th><th>Sections <span class="text-muted small">(green complete, red items missing, grey not started)</span></th><th style="min-width:170px">Completed items</th><th class="text-end">Missing</th></tr></thead>
+  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>MRN</th>{% endif %}<th>Interview</th><th>Sections <span class="text-muted small">(green complete, red items missing, grey not started)</span></th><th style="min-width:170px">Completed items</th><th class="text-end">Missing</th></tr></thead>
   <tbody>
   {% for p, st in rows %}
   <tr>
     <td><a href="{% url 'crf:detail' p.pk %}" class="fw-semibold">{{ p.study_id }}</a>{% if p.locked %} <span title="Verified and locked">🔒</span>{% endif %}</td>
-    {% if can.view_identity %}<td>{{ p.hospital_id|default:"—" }}</td>{% endif %}
-    <td>{{ p.interview_date|date:"d M Y" }}</td><td class="small">{{ p.interviewer }}</td>
+    {% if can.view_identity %}<td class="text-nowrap">{% if p.hospital_id %}{{ p.hospital_id }}{% else %}<span class="missing-text">missing</span>{% endif %}</td>{% endif %}
+    <td class="text-nowrap">{{ p.interview_date|date:"d M Y" }}</td>
     <td>{% for s in st.sections %}{% if s.state != 'calculated' %}<a class="sec-chip {{ s.state }}" href="{% url 'crf:section' p.pk s.code %}" title="{{ s.title }}: {{ s.answered }}/{{ s.expected }}{% if s.missing %} · missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}">{{ s.code }}</a>{% endif %}{% endfor %}</td>
     <td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:8px" role="progressbar" aria-valuenow="{{ st.pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-{{ st.pct|pct_class }}" style="width:{{ st.pct }}%"></div></div><span class="small text-nowrap">{{ st.done }}/{{ st.expected }} · <strong>{{ st.pct }}%</strong></span></div></td>
     <td class="text-end">{% if st.missing_count %}<span class="badge text-bg-danger">{{ st.missing_count }}</span>{% else %}<span class="text-success">0</span>{% endif %}</td>
   </tr>
-  {% empty %}<tr><td colspan="7" class="text-muted p-3">No participants found.</td></tr>
+  {% empty %}<tr><td colspan="6" class="text-muted p-3">No participants found.</td></tr>
   {% endfor %}
   </tbody>
 </table>
