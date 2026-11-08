@@ -75,7 +75,9 @@
         <dd class="col-12 small text-muted mb-2">Points: bilirubin {{ scores.cp_bili_pts|default:"?" }}, albumin {{ scores.cp_alb_pts|default:"?" }}, INR {{ scores.cp_inr_pts|default:"?" }}, ascites {{ scores.cp_ascites_pts|default:"?" }}, encephalopathy {{ scores.cp_enceph_pts|default:"?" }}</dd>
         <dt class="col-7">MELD / MELD-Na</dt><dd class="col-5">{{ scores.meld|default:"—" }} / {{ scores.meld_na|default:"—" }}</dd>
         <dt class="col-7">APRI</dt><dd class="col-5">{{ scores.apri|default:"—" }}</dd>
-        <dt class="col-7">K1 Child-Pugh C · K2 MELD-Na ≥ 15</dt><dd class="col-5">{{ scores.k_child_c|show }} · {{ scores.k_meld15|show }}</dd>
+        <dt class="col-7">HCC within Milan criteria</dt><dd class="col-5">{% if scores.hcc_milan is None %}—{% elif scores.hcc_milan %}Yes{% else %}No{% endif %}</dd>
+        <dt class="col-7">Child-Pugh C · MELD-Na ≥ 15</dt><dd class="col-5">{{ scores.k_child_c|show }} · {{ scores.k_meld15|show }}</dd>
+        <dt class="col-7">Transplant indicated <span class="small fw-normal text-muted">(proposed, D37)</span></dt><dd class="col-5">{% if scores.lt_indicated is None %}—{% elif scores.lt_indicated %}<span class="badge text-bg-danger">Yes</span>{% else %}No{% endif %}</dd>
         <dt class="col-7">Length of stay from dates</dt><dd class="col-5">{{ scores.los_from_dates|default:"—" }}</dd>
       </dl>
       <p class="small text-muted mb-0 mt-2">Blank when an input is missing or still pending.</p>

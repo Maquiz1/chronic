@@ -13,7 +13,7 @@ from accounts.mixins import RoleRequiredMixin
 from accounts.roles import user_can
 from crf import exports as ex
 from crf import spec
-from crf.dictionary import build_workbook, codebook_pdf, dictionary_filename
+from crf.dictionary import archived_versions, build_workbook, codebook_pdf, dictionary_filename
 from crf.models import SECTION_MODELS, Participant
 
 from .models import ExportJob
@@ -42,7 +42,8 @@ class ExportPageView(RoleRequiredMixin, TemplateView):
                                           created_at__gte=timezone.now() - timedelta(hours=settings.EXPORT_FILE_HOURS))
         return {**super().get_context_data(**kwargs), 'rows': rows, 'total': total, 'modes': ex.MODES,
                 'formats': ex.FORMATS, 'can_export': any(user_can(user, a) for a in EXPORT_ACTIONS),
-                'recent': recent.defer('content')[:10], 'hours': settings.EXPORT_FILE_HOURS}
+                'recent': recent.defer('content')[:10], 'hours': settings.EXPORT_FILE_HOURS,
+                'version': spec.VERSION, 'archived': [v for v, _p in archived_versions()]}
 
 
 class StartExportView(RoleRequiredMixin, View):
@@ -93,6 +94,20 @@ class DownloadExportView(RoleRequiredMixin, View):
         content = ExportJob.objects.values_list('content', flat=True).get(pk=job.pk)
         response = HttpResponse(bytes(content), content_type=CONTENT_TYPES[job.fmt])
         response['Content-Disposition'] = f'attachment; filename="{job.file_name}"'
+        return response
+
+
+class ArchivedDictionaryView(RoleRequiredMixin, View):
+    """An earlier data dictionary version, exactly as it was issued."""
+
+    action = 'view_data'
+
+    def get(self, request, version):
+        path = dict(archived_versions()).get(version)
+        if path is None:
+            raise Http404
+        response = HttpResponse(path.read_bytes(), content_type=CONTENT_TYPES['xlsx'])
+        response['Content-Disposition'] = f'attachment; filename="{path.name}"'
         return response
 
 

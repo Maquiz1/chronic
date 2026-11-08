@@ -142,10 +142,10 @@ class EntryTests(TestCase):
         self.assertEqual(SECTION_MODELS['G'].objects.get().creatinine, Decimal('421.0'))
 
     def test_skip_rules_clear_hidden_answers(self):
-        self.client.post(self.section_url('D'), {'hepatic_enceph': '1', 'he_grade': '3'})
-        d = SECTION_MODELS['D'].objects.get()
+        self.client.post(self.section_url('F'), {'hepatic_enceph': '1', 'he_grade': '3'})
+        d = SECTION_MODELS['F'].objects.get()
         self.assertEqual(d.he_grade, 3)
-        self.client.post(self.section_url('D'), {'hepatic_enceph': '0', 'he_grade': '3'})
+        self.client.post(self.section_url('F'), {'hepatic_enceph': '0', 'he_grade': '3'})
         d.refresh_from_db()
         self.assertIsNone(d.he_grade)
 
@@ -192,7 +192,7 @@ class EntryTests(TestCase):
         for name in ('dashboard', 'crf:list', 'exports:page', 'reports:schedules', 'quality:overview', 'quality:pending', 'quality:issues',
                      'quality:queries', 'accounts:users', 'accounts:roles', 'accounts:profile'):
             self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
-        for code in ('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L'):
+        for code in ('A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K', 'L'):
             self.assertEqual(self.client.get(self.section_url(code)).status_code, 200, code)
         self.assertEqual(self.client.get(reverse('crf:history', args=[self.p.pk])).status_code, 200)
 
@@ -201,14 +201,47 @@ class ScoreTests(TestCase):
     def test_meld_na_and_child_pugh(self):
         v = {'creatinine': Decimal('1.9'), 'creatinine_unit': 2, 'bilirubin': Decimal('4.2'), 'bilirubin_unit': 2,
              'inr': Decimal('1.6'), 'sodium': 128, 'albumin': Decimal('26'), 'albumin_unit': 1,
-             'cp_ascites': 2, 'hepatic_enceph': 1, 'he_grade': 2}
+             'ascites': 1, 'ascites_grade': 1, 'hepatic_enceph': 1, 'he_grade': 2}
         self.assertEqual(derived.meld(v), 23.3)
         self.assertEqual(derived.meld_na(v), 28)
-        # bilirubin 4.2 mg/dL = 3, albumin 2.6 g/dL = 3, INR 1.6 = 1, ascites mild = 2, HE grade II = 2
+        # bilirubin 4.2 mg/dL = 3, albumin 2.6 g/dL = 3, INR 1.6 = 1, ascites moderate = 2, HE grade II = 2
         self.assertEqual(derived.cp_score(v), 11)
         self.assertEqual(derived.cp_class(v), 'C')
         self.assertEqual(derived.k_child_c(v), 1)
         self.assertEqual(derived.k_meld15(v), 1)
+
+    def test_v02_scores(self):
+        self.assertEqual(derived.cp_ascites_pts({'ascites': 0}), 1)
+        self.assertEqual(derived.cp_ascites_pts({'ascites': 1, 'ascites_grade': 2}), 3)
+        self.assertIsNone(derived.cp_ascites_pts({'ascites': 1}))
+        self.assertEqual(derived.cp_enceph_pts({'hepatic_enceph': 1, 'he_grade': 0}), 1)
+        hcc = {'img_hcc': 1, 'hcc_vascular_invasion': 0, 'hcc_extrahepatic': 0}
+        self.assertEqual(derived.hcc_milan({**hcc, 'hcc_lesions': 1, 'hcc_size_cm': Decimal('4.5')}), 1)
+        self.assertEqual(derived.hcc_milan({**hcc, 'hcc_lesions': 3, 'hcc_size_cm': Decimal('3.5')}), 0)
+        self.assertEqual(derived.hcc_milan({**hcc, 'hcc_lesions': 1, 'hcc_size_cm': 2, 'hcc_extrahepatic': 1}), 0)
+        self.assertIsNone(derived.hcc_milan({'img_hcc': 0}))
+        self.assertEqual(derived.lt_indicated({'k_recurrent_variceal': 1}), 1)
+        self.assertIsNone(derived.lt_indicated({'k_recurrent_variceal': 0}))  # scores unknown
+
+    def test_imaging_skip_rule_and_not_done(self):
+        today = timezone.localdate()
+        self.client.force_login(make_user('data_clerk'))
+        self.client.post(reverse('crf:create'), {'hospital_id': 'IMG-01', 'interview_date': today})
+        p = Participant.objects.get()
+        url = reverse('crf:section', args=[p.pk, 'G'])
+        # No modality ticked: imaging findings are cleared and not expected
+        self.client.post(url, {'img_hcc': '1', 'nd__img_modality': 'on'})
+        g = SECTION_MODELS['G'].objects.get()
+        self.assertIsNone(g.img_hcc)
+        self.assertIn('img_modality', g.not_done)
+        missing = [f.name for f in checks.section_status('G', Participant.objects.get().values())['missing']]
+        self.assertNotIn('img_hcc', missing)
+        self.assertNotIn('img_modality', missing)
+        # Ultrasound done, HCC seen: lesion details become expected
+        self.client.post(url, {'img_modality_us': 'on', 'img_hcc': '1'})
+        missing = [f.name for f in checks.section_status('G', Participant.objects.get().values())['missing']]
+        self.assertIn('hcc_lesions', missing)
+        self.assertEqual(SECTION_MODELS['G'].objects.get().img_hcc, 1)
 
     def test_unit_conversion(self):
         self.assertEqual(derived.creatinine_mgdl({'creatinine': Decimal('88.4'), 'creatinine_unit': 1}), 1.0)
@@ -217,9 +250,14 @@ class ScoreTests(TestCase):
 
     def test_checks_find_contradictions_and_wrong_units(self):
         v = {'interview_date': timezone.localdate(), 'admission_date': timezone.localdate(),
-             'hepatic_enceph': 1, 'comp_he': 0, 'albumin': Decimal('8'), 'albumin_unit': 1}
+             'hepatic_enceph': 1, 'he_grade': 0, 'hbsag': 1, 'hbv': 0, 'albumin': Decimal('8'), 'albumin_unit': 1,
+             'bilirubin': Decimal('2.0'), 'bilirubin_unit': 2, 'direct_bilirubin': Decimal('51'),
+             'direct_bilirubin_unit': 1, 'bp_systolic': 90, 'bp_diastolic': 95}
         rules = {i.rule for i in checks.all_issues(v)}
-        self.assertIn('he', rules)
+        self.assertIn('he_grade0', rules)
+        self.assertIn('hbsag_history', rules)
+        self.assertIn('direct_bili', rules)  # 51 µmol/L = 3 mg/dL, above the total of 2 mg/dL
+        self.assertIn('bp', rules)
         self.assertIn('check', rules)  # 8 g/L is probably a g/dL value or a typo
 
 

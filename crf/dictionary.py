@@ -29,8 +29,31 @@ WRAP = Alignment(wrap_text=True, vertical='top')
 # Version history: add a line for every new version.
 CHANGE_LOG = [
     ('0.1', '2026-11-08', 'First draft from "questionnaire final.docx" and the MNH lab sheets (units1.jpeg, '
-     'units2.jpeg). Proposal not yet received.'),
+     'units2.jpeg). Proposal not yet received. Later: Hospital ID added (H1a, D35).'),
+    ('0.2', '2026-11-08', 'Updated to "questionnaire final_v0.2.docx". Sections re-lettered: Etiology D (was E), '
+     'Comorbidities E (was F), Examination F (was D). Etiology: hepatitis B/C duration and treatment added; PBC, PSC, '
+     'Wilson and haemochromatosis removed; alcohol units per week replaced by days drinking per week. Examination: blood '
+     'pressure, ascites grade (Moderate/Severe) and HE grade 0 added. Investigations: direct bilirubin, potassium, '
+     'chloride, BUN, AFP, HBsAg, HCV antibody, HIV test, imaging modality and HCC lesion details (number, largest size, '
+     'vein invasion, extrahepatic spread) added; imaging items no longer ultrasound-only. Complications: only SBP and '
+     'bleeding varices on OGD remain. Sections I (Child-Pugh) and J (MELD-Na) removed from the CRF: calculated. '
+     'Transplant: Child-Pugh C, MELD-Na, Milan and "meets criteria" removed; calculated, plus a proposed outcome '
+     '"transplant indicated" (D37). Decisions D04, D09-D12, D15, D20, D31, D34 answered; D36-D41 new.'),
 ]
+
+# Issued versions are kept in data_dictionary/ (not in git; mounted read-only into the app on the server) and every
+# version found there, other than the current one, can still be downloaded in the app.
+ARCHIVE_DIR = Path(__file__).resolve().parent.parent / 'data_dictionary'
+
+
+def archived_versions():
+    """[(version, path)] of earlier dictionary versions, newest first, excluding the current one."""
+    out = []
+    for path in sorted(ARCHIVE_DIR.glob('DCLD_Data_Dictionary_v*.xlsx'), reverse=True):
+        version = path.stem.rsplit('_v', 1)[1]
+        if version != spec.VERSION:
+            out.append((version, path))
+    return out
 
 
 def dictionary_filename(section=None):
@@ -126,7 +149,7 @@ def build_workbook(section=None):
         ('Purpose', 'Lists every variable on the questionnaire with its code, label, type, codes, units, limits and '
                     'skip rules. The data entry system, its checks and the exports are generated from the same source '
                     '(crf/spec.py), so this workbook always matches the system.'),
-        ('Sources', f'documentations/tools/{spec.CRF_SOURCE}; documentations/si_units_range/units1.jpeg (MNH '
+        ('Sources', f'documentations/tools/{spec.CRF_SOURCE} (CRF version {spec.VERSION}); documentations/si_units_range/units1.jpeg (MNH '
                     'Gastroenterology unit lab sheet: tests and units) and units2.jpeg (MNH Jeeva clinical chemistry '
                     'screen: units and reference limits). The study proposal was not available.'),
         ('What to do', '1. Answer the Decisions sheet in the yellow columns, starting with the High items.\n'

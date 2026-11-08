@@ -150,7 +150,11 @@ class SectionFormBase(forms.ModelForm):
                     values[column] = empty
         not_done = []
         for f in self.section.fields:
-            if f.allow_nd and self.cleaned_data.get(f'nd__{f.name}') and getattr(obj, f.name) in (None, ''):
+            if not (f.allow_nd and self.cleaned_data.get(f'nd__{f.name}')):
+                continue
+            answered = any(getattr(obj, c) for c in f.columns) if f.type == 'select_multiple' \
+                else getattr(obj, f.name) not in (None, '')
+            if not answered:
                 not_done.append(f.name)
         obj.not_done = not_done
         if commit:

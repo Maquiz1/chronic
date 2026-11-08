@@ -46,7 +46,9 @@ forms, checks, exports and the data dictionary are all generated from it, so the
 2. Raise `VERSION` in `crf/spec.py` and add a line to `CHANGE_LOG` in `crf/dictionary.py`.
 3. `python manage.py makemigrations crf` and check the migration (renaming a field: make it a rename, not drop + add,
    so no data is lost).
-4. `python manage.py build_dictionary` writes the new workbook; keep the old versions in `data_dictionary/`.
+4. `python manage.py build_dictionary` writes the new workbook into `data_dictionary/` (not in git). Keep the old
+   versions there. On the server, copy the files to `/opt/chronic/data_dictionary/`: every earlier version found there
+   stays downloadable in the app (Exports & dictionary → earlier versions).
 5. `python manage.py test`, then deploy.
 
 ## Run on your computer

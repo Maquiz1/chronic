@@ -10,4 +10,5 @@ urlpatterns = [
     path('<int:pk>/status/', views.ExportStatusView.as_view(), name='status'),
     path('<int:pk>/download/', views.DownloadExportView.as_view(), name='download'),
     path('codebook/<str:key>/<str:fmt>/', views.CodebookView.as_view(), name='codebook'),
+    path('dictionary/v<str:version>/', views.ArchivedDictionaryView.as_view(), name='archived_dictionary'),
 ]

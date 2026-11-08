@@ -95,6 +95,9 @@
 
   function holds(cond) {
     const [name, op, expected] = cond;
+    if (op === 'any') {  // any option of a multiple-answer question ticked
+      return Array.from(form.querySelectorAll('input[type=checkbox][name^="' + name + '_"]')).some(function (c) { return c.checked; });
+    }
     const v = valueOf(name);
     if (op === 'filled') return v !== '' && v !== null && v !== false;
     if (op === '==') return expected === true ? v === true : String(v) === String(expected);

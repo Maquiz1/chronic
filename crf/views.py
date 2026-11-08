@@ -222,7 +222,7 @@ class SectionEditView(RoleRequiredMixin, ParticipantMixin, TemplateView):
         values = self.values
         return {'participant': participant, 'section': spec.SECTION_BY_CODE[code], 'form': form,
                 'rows': form.rows(), 'next_code': self.next_code(code), 'entry_codes': ENTRY_CODES,
-                'scores': derived.compute_all(values) if code in ('G', 'I', 'K') else None,
+                'scores': derived.compute_all(values) if code in ('F', 'G', 'K') else None,
                 'status': checks.section_status(code, values)}
 
 

@@ -171,43 +171,50 @@ def consistency_issues(values):
         if years is not None and years > age:
             add(ERROR, 'B', 'dx_duration', 'Years since diagnosis is more than the age.', 'dx_gt_age')
         if v.get('alcohol_years') is not None and v['alcohol_years'] > age:
-            add(ERROR, 'E', 'alcohol_years', 'Years of alcohol use is more than the age.', 'alc_gt_age')
+            add(ERROR, 'D', 'alcohol_years', 'Years of alcohol use is more than the age.', 'alc_gt_age')
 
     bmi = derived.bmi(v)
     if bmi is not None and not 12 <= bmi <= 60:
-        add(WARNING, 'D', 'weight_kg', f'BMI {bmi} is implausible; check weight and height.', 'bmi')
+        add(WARNING, 'F', 'weight_kg', f'BMI {bmi} is implausible; check weight and height.', 'bmi')
 
-    day, week = _num(v.get('alcohol_units_day')), _num(v.get('alcohol_units_week'))
-    if day and week and not 0.5 <= week / (day * 7) <= 2:
-        add(WARNING, 'E', 'alcohol_units_week', f'{_fmt(day)} units/day does not match {_fmt(week)} units/week.', 'alc_units')
-
-    # The same condition recorded in more than one section.
-    if _differs(v, 'hepatic_enceph', 'comp_he'):
-        add(WARNING, 'H', 'comp_he', 'Hepatic encephalopathy differs between examination (D9) and complications (H3).', 'he')
+    # Answers that contradict each other.
     if v.get('asterixis') == 1 and v.get('hepatic_enceph') == 0:
-        add(WARNING, 'D', 'asterixis', 'Asterixis present but hepatic encephalopathy absent.', 'asterixis')
-    if _differs(v, 'ascites', 'comp_ascites'):
-        add(WARNING, 'H', 'comp_ascites', 'Ascites differs between examination (D7) and complications (H1).', 'ascites')
-    if v.get('ascites') == 1 and v.get('cp_ascites') == 1:
-        add(WARNING, 'I', 'cp_ascites', 'Ascites present on examination but Child-Pugh ascites is "None".', 'cp_ascites')
-    if v.get('ascites') == 0 and v.get('cp_ascites') in (2, 3):
-        add(WARNING, 'I', 'cp_ascites', 'Ascites absent on examination but Child-Pugh ascites is graded.', 'cp_ascites2')
-    hcc = {k: v.get(k) for k in ('hcc_etiology', 'us_hcc', 'comp_hcc')}
-    if 1 in hcc.values() and 0 in hcc.values():
-        add(WARNING, 'H', 'comp_hcc', 'Hepatocellular carcinoma is Yes in some sections and No in others (E13, G17, H7).', 'hcc')
-    if v.get('k_hcc_milan') == 1 and 1 not in hcc.values():
-        add(WARNING, 'K', 'k_hcc_milan', 'HCC within Milan criteria, but HCC is not recorded in E13, G17 or H7.', 'milan')
-    if v.get('us_pvt') == 1 and v.get('comp_pvt') == 0:
-        add(WARNING, 'H', 'comp_pvt', 'Portal vein thrombosis on imaging (G16) but not as a complication (H6).', 'pvt')
+        add(WARNING, 'F', 'asterixis', 'Asterixis present but hepatic encephalopathy absent.', 'asterixis')
+    if v.get('hepatic_enceph') == 1 and v.get('he_grade') == 0:
+        add(WARNING, 'F', 'he_grade', 'Hepatic encephalopathy "Present" with grade 0 (grade 0 means none).', 'he_grade0')
+    if v.get('ascites') == 1 and v.get('img_ascites') == 0:
+        add(WARNING, 'G', 'img_ascites', 'Ascites present on examination (F7) but not on imaging (G23).', 'ascites_img')
+    if v.get('k_refractory_ascites') == 1 and v.get('ascites') == 0:
+        add(WARNING, 'K', 'k_refractory_ascites', 'Refractory ascites (K2) but ascites absent on examination (F7).',
+            'refractory')
     if v.get('comp_variceal_bleed') == 1 and v.get('gi_bleeding') == 0:
-        add(WARNING, 'D', 'gi_bleeding', 'Variceal bleeding (H4) but no evidence of GI bleeding (D14).', 'gib')
-    if v.get('k_meets_criteria') == 1 and not any(
-            x == 1 for x in (derived.k_child_c(v), derived.k_meld15(v), v.get('k_recurrent_variceal'),
-                             v.get('k_refractory_ascites'), v.get('k_recurrent_he'), v.get('k_hcc_milan'))):
-        add(WARNING, 'K', 'k_meets_criteria', 'Meets transplant criteria, but no indication (K1-K6) is Yes.', 'k_none')
-    if v.get('sym_jaundice') and v.get('jaundice') == 0 and (derived.bilirubin_mgdl(v) or 0) > 3:
-        add(WARNING, 'D', 'jaundice', 'Jaundice absent on examination with bilirubin above 3 mg/dL.', 'jaundice')
+        add(WARNING, 'F', 'gi_bleeding', 'Bleeding varices on OGD (H2) but no evidence of GI bleeding (F14).', 'gib')
+    if v.get('hcc_etiology') == 1 and v.get('img_hcc') == 0:
+        add(WARNING, 'G', 'img_hcc', 'History of HCC (D9) but imaging shows no HCC (G26).', 'hcc')
+    for lab, history, label in (('hbsag', 'hbv', 'HBsAg positive (G18) but history of hepatitis B is No (D1).'),
+                                ('hcv_ab', 'hcv', 'Hepatitis C antibody positive (G19) but history of hepatitis C is '
+                                                  'No (D2).'),
+                                ('hiv_test', 'hiv', 'HIV test positive (G20) but history of HIV is No (E1).')):
+        if v.get(lab) == 1 and v.get(history) == 0:
+            add(WARNING, 'D' if history != 'hiv' else 'E', history, label, f'{lab}_history')
+    systolic, diastolic = v.get('bp_systolic'), v.get('bp_diastolic')
+    if systolic is not None and diastolic is not None and diastolic >= systolic:
+        add(ERROR, 'F', 'bp_diastolic', f'Diastolic pressure ({diastolic}) is not below systolic ({systolic}).', 'bp')
+    total, direct = derived.bilirubin_mgdl(v), _direct_bilirubin_mgdl(v)
+    if total is not None and direct is not None and direct > total * 1.02:
+        add(ERROR, 'G', 'direct_bilirubin', 'Direct bilirubin is higher than total bilirubin (check the units).',
+            'direct_bili')
+    if v.get('sym_jaundice') and v.get('jaundice') == 0 and (total or 0) > 3:
+        add(WARNING, 'F', 'jaundice', 'Jaundice absent on examination with bilirubin above 3 mg/dL.', 'jaundice')
     return out
+
+
+def _direct_bilirubin_mgdl(v):
+    x = _num(v.get('direct_bilirubin'))
+    unit = v.get('direct_bilirubin_unit')
+    if x is None or unit not in (1, 2):
+        return None
+    return x / 17.1 if unit == 1 else x
 
 
 def all_issues(values):

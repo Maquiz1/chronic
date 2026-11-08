@@ -53,7 +53,7 @@ class Participant(models.Model):
         if code not in SECTION_MODELS:
             return None
         try:
-            return getattr(self, f'section_{code.lower()}')
+            return getattr(self, SECTION_RELATED_NAME[code])
         except ObjectDoesNotExist:
             return None
 
@@ -117,16 +117,32 @@ def _django_field(f):
 
 SECTION_MODELS = {}
 SECTION_COLUMNS = {}
+SECTION_RELATED_NAME = {}
+
+# Model (class) names stay tied to the section's topic, not its letter, so that a new CRF version can re-letter
+# sections without moving data: v0.2 turned Etiology from E into D, Examination from D into F, etc. The names below
+# are the ones the v0.1 tables were created with; a section added later gets "Section" + its key in CamelCase.
+MODEL_NAMES = {'sociodemographic': 'SectionA', 'liver_history': 'SectionB', 'presentation': 'SectionC',
+               'examination': 'SectionD', 'etiology': 'SectionE', 'comorbidities': 'SectionF',
+               'investigations': 'SectionG', 'complications': 'SectionH', 'transplant': 'SectionK',
+               'outcome': 'SectionL'}
+
+
+def model_name(section):
+    return MODEL_NAMES.get(section.key) or 'Section' + ''.join(part.title() for part in section.key.split('_'))
+
 
 for _section in spec.SECTIONS:
     if not _section.fields:
-        continue  # e.g. Section J is calculated only
+        continue  # e.g. Sections I and J are calculated only
+    SECTION_RELATED_NAME[_section.code] = f'section_{_section.key}'
     attrs = {
         '__module__': __name__,
         '__doc__': f'CRF Section {_section.code}: {_section.title}',
-        'participant': models.OneToOneField(Participant, on_delete=models.CASCADE, related_name=f'section_{_section.code.lower()}'),
+        'participant': models.OneToOneField(Participant, on_delete=models.CASCADE,
+                                            related_name=SECTION_RELATED_NAME[_section.code]),
         'SECTION': _section,
-        'Meta': type('Meta', (), {'db_table': f'crf_section_{_section.code.lower()}_{_section.key}',
+        'Meta': type('Meta', (), {'db_table': f'crf_section_{_section.key}',
                                   'verbose_name': f'Section {_section.code}: {_section.title}',
                                   'verbose_name_plural': f'Section {_section.code}: {_section.title}'}),
     }
@@ -139,7 +155,7 @@ for _section in spec.SECTIONS:
         else:
             attrs[_f.name] = _django_field(_f)
             columns.append(_f.name)
-    _model = type(f'Section{_section.code}', (SectionBase,), attrs)
+    _model = type(model_name(_section), (SectionBase,), attrs)
     register(_model, excluded_fields=['updated_at'])
     globals()[_model.__name__] = _model
     SECTION_MODELS[_section.code] = _model
@@ -147,4 +163,4 @@ for _section in spec.SECTIONS:
 
 
 # For Participant.objects.select_related(*SECTION_RELATED): one query loads every section.
-SECTION_RELATED = [f'section_{code.lower()}' for code in SECTION_MODELS]
+SECTION_RELATED = list(SECTION_RELATED_NAME.values())

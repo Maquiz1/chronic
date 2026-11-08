@@ -25,7 +25,7 @@ class ExportTests(TestCase):
                                                  'phone_number': '0712000000'})
         self.p = Participant.objects.get()
         self.client.post(reverse('crf:section', args=[self.p.pk, 'G']), {'hb': '9.8', 'inr': '1.9', 'nd__ggt': 'on'})
-        self.client.post(reverse('crf:section', args=[self.p.pk, 'D']), {'hepatic_enceph': '1', 'he_grade': '2'})
+        self.client.post(reverse('crf:section', args=[self.p.pk, 'F']), {'hepatic_enceph': '1', 'he_grade': '2'})
 
     def export(self, **params):
         r = self.client.post(reverse('exports:start'), {'mode': 'codes', 'format': 'xlsx', **params})
@@ -44,11 +44,11 @@ class ExportTests(TestCase):
         row = dict(zip(header, [c.value for c in wb['section_G'][2]]))
         self.assertEqual(row['inr'], 1.9)
         self.assertEqual(row['not_done_items'], 'ggt')
-        wb = load_workbook(BytesIO(self.export(dataset='D', mode='labels').content))
-        header = [c.value for c in wb['section_D'][1]]
-        row = dict(zip(header, [c.value for c in wb['section_D'][2]]))
-        self.assertEqual(row['D9 Hepatic encephalopathy'], 'Present')
-        self.assertEqual(row['D9a If present: grade (West Haven)'], 'Grade II')
+        wb = load_workbook(BytesIO(self.export(dataset='F', mode='labels').content))
+        header = [c.value for c in wb['section_F'][1]]
+        row = dict(zip(header, [c.value for c in wb['section_F'][2]]))
+        self.assertEqual(row['F9 Hepatic encephalopathy'], 'Present')
+        self.assertEqual(row['F9a If present: grade (West Haven)'], 'Grade II')
 
     def test_all_combined_csv_and_identifiable(self):
         wb = load_workbook(BytesIO(self.export(dataset='all', format='csv').content))  # "all" is always Excel

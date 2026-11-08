@@ -18,6 +18,8 @@ x-app: &app
     CELERY_BROKER_URL: redis://cld-redis:6379/0
   volumes:
     - sent_emails:/app/sent_emails
+    # Issued data dictionary versions (not in git): copy the .xlsx files into /opt/chronic/data_dictionary/
+    - ./data_dictionary:/app/data_dictionary:ro
   depends_on:
     cld-db:
       condition: service_healthy

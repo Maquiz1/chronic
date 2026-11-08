@@ -68,6 +68,13 @@
 </table>
 </div></div>
 
+<div class="card mb-3"><div class="card-body small">
+  <strong>Data dictionary version {{ version }}</strong> (current; the codebook buttons above use it).
+  {% if archived %}Earlier versions, as issued:
+    {% for v in archived %}<a href="{% url 'exports:archived_dictionary' v %}">v{{ v }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}.
+  {% endif %}
+</div></div>
+
 {% if can_export %}
 <div class="card"><div class="card-body">
   <h2 class="h6">Your exports (last {{ hours }} hours)</h2>

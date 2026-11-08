@@ -68,9 +68,19 @@ def cp_inr_pts(v):
     return 1 if i < 1.7 else (2 if i <= 2.3 else 3)
 
 
+def cp_ascites_pts(v):
+    """Absent = 1, Moderate = 2, Severe = 3 (D36: the CRF has no "Mild" grade)."""
+    ascites, grade = v.get('ascites'), v.get('ascites_grade')
+    if ascites == 0:
+        return 1
+    if ascites == 1 and grade in (1, 2):
+        return grade + 1
+    return None
+
+
 def cp_enceph_pts(v):
     he, grade = v.get('hepatic_enceph'), v.get('he_grade')
-    if he == 0:
+    if he == 0 or (he == 1 and grade == 0):
         return 1
     if he == 1 and grade in (1, 2):
         return 2
@@ -80,7 +90,7 @@ def cp_enceph_pts(v):
 
 
 def cp_score(v):
-    parts = [cp_bili_pts(v), cp_alb_pts(v), cp_inr_pts(v), v.get('cp_ascites'), cp_enceph_pts(v)]
+    parts = [cp_bili_pts(v), cp_alb_pts(v), cp_inr_pts(v), cp_ascites_pts(v), cp_enceph_pts(v)]
     if any(p is None for p in parts):
         return None
     return sum(parts)
@@ -122,6 +132,31 @@ def k_meld15(v):
     return None if m is None else int(m >= 15)
 
 
+def hcc_milan(v):
+    """Milan criteria, only for HCC seen on imaging: one lesion <= 5 cm, or 2-3 lesions with the largest <= 3 cm,
+    without vein invasion or extrahepatic spread."""
+    if v.get('img_hcc') != 1:
+        return None
+    n, size = v.get('hcc_lesions'), _f(v.get('hcc_size_cm'))
+    invasion, spread = v.get('hcc_vascular_invasion'), v.get('hcc_extrahepatic')
+    if 1 in (invasion, spread):
+        return 0
+    if None in (n, size, invasion, spread):
+        return None
+    return int((n == 1 and size <= 5) or (2 <= n <= 3 and size <= 3))
+
+
+def lt_indicated(v):
+    """Proposed study outcome (D37): any indication met."""
+    criteria = [k_child_c(v), k_meld15(v), v.get('k_recurrent_variceal'), v.get('k_refractory_ascites'),
+                v.get('k_recurrent_he'), hcc_milan(v) if v.get('img_hcc') == 1 else 0]
+    if 1 in criteria:
+        return 1
+    if any(c is None for c in criteria):
+        return None
+    return 0
+
+
 def los_from_dates(v):
     a, b = v.get('admission_date'), v.get('outcome_date')
     if not a or not b:
@@ -131,10 +166,10 @@ def los_from_dates(v):
 
 CALCULATORS = {
     'bmi': bmi, 'bilirubin_mgdl': bilirubin_mgdl, 'albumin_gdl': albumin_gdl, 'creatinine_mgdl': creatinine_mgdl,
-    'apri': apri, 'cp_bili_pts': cp_bili_pts, 'cp_alb_pts': cp_alb_pts, 'cp_inr_pts': cp_inr_pts,
-    'cp_ascites_pts': lambda v: v.get('cp_ascites'), 'cp_enceph_pts': cp_enceph_pts, 'cp_score': cp_score,
+    'apri': apri, 'hcc_milan': hcc_milan, 'cp_bili_pts': cp_bili_pts, 'cp_alb_pts': cp_alb_pts,
+    'cp_inr_pts': cp_inr_pts, 'cp_ascites_pts': cp_ascites_pts, 'cp_enceph_pts': cp_enceph_pts, 'cp_score': cp_score,
     'cp_class': cp_class, 'meld': meld, 'meld_na': meld_na, 'k_child_c': k_child_c, 'k_meld15': k_meld15,
-    'los_from_dates': los_from_dates,
+    'lt_indicated': lt_indicated, 'los_from_dates': los_from_dates,
 }
 
 
