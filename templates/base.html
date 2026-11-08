@@ -9,58 +9,116 @@
   <link href="{% static 'app.css' %}" rel="stylesheet">
 </head>
 <body>
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary-subtle-dark mb-3">
-  <div class="container-fluid">
-    <a class="navbar-brand fw-semibold" href="{% url 'dashboard' %}">{{ SITE_NAME }}</a>
-    {% if user.is_authenticated %}
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
-    <div class="collapse navbar-collapse" id="nav">
-      <ul class="navbar-nav me-auto">
-        {% if user.is_approved %}
-        {% if can.view_data %}<li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Dashboard</a></li>
-        <li class="nav-item"><a class="nav-link" href="{% url 'crf:list' %}">Participants</a></li>{% endif %}
-        {% if can.enter_data %}<li class="nav-item"><a class="nav-link" href="{% url 'crf:create' %}">+ New participant</a></li>{% endif %}
-        {% if can.view_quality %}
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">Data quality</a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="{% url 'quality:overview' %}">Completeness</a></li>
-            <li><a class="dropdown-item" href="{% url 'quality:pending' %}">Pending results</a></li>
-            <li><a class="dropdown-item" href="{% url 'quality:issues' %}">Automatic checks</a></li>
-            <li><a class="dropdown-item" href="{% url 'quality:queries' %}">Queries</a></li>
-          </ul>
-        </li>{% endif %}
-        {% if can.export_deidentified %}<li class="nav-item"><a class="nav-link" href="{% url 'crf:exports' %}">Exports</a></li>{% endif %}
-        {% if can.approve_users %}<li class="nav-item"><a class="nav-link" href="{% url 'accounts:users' %}">Users</a></li>{% endif %}
-        {% endif %}
-      </ul>
-      <ul class="navbar-nav">
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">{{ user }}{% if user.role %} <span class="badge text-bg-light">{{ user.get_role_display }}</span>{% endif %}</a>
-          <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">My profile</a></li>
-            <li><a class="dropdown-item" href="{% url 'accounts:password_change' %}">Change password</a></li>
-            <li><a class="dropdown-item" href="{% url 'accounts:roles' %}">Roles</a></li>
-            {% if user.is_superuser %}<li><a class="dropdown-item" href="{% url 'admin:index' %}">Django admin</a></li>{% endif %}
-            <li><hr class="dropdown-divider"></li>
-            <li><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="dropdown-item">Log out</button></form></li>
-          </ul>
-        </li>
-      </ul>
+{% with ns=request.resolver_match.namespace url=request.resolver_match.url_name %}
+{% if user.is_authenticated and user.is_approved %}
+<div class="app-shell">
+  <aside class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebar" aria-labelledby="sidebar-title">
+    <div class="sidebar-brand">
+      <a href="{% url 'dashboard' %}" id="sidebar-title">
+        <span class="brand-mark">D</span>
+        <span><strong>{{ SITE_NAME }}</strong><small>Muhimbili National Hospital</small></span>
+      </a>
+      <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close menu"></button>
     </div>
-    {% endif %}
+    <nav class="sidebar-nav">
+      {% if can.view_data %}
+      <div class="nav-label">Records</div>
+      <a class="side-link {% if url == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
+        <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>Dashboard</a>
+      <a class="side-link {% if ns == 'crf' and url != 'create' and url != 'exports' %}active{% endif %}" href="{% url 'crf:list' %}">
+        <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05C16.19 13.89 17 15.02 17 16.5V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Participants</a>
+      {% endif %}
+      {% if can.enter_data %}
+      <a class="side-link {% if ns == 'crf' and url == 'create' %}active{% endif %}" href="{% url 'crf:create' %}">
+        <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New participant</a>
+      {% endif %}
+      {% if can.view_quality %}
+      <div class="nav-label">Data quality</div>
+      <a class="side-link {% if ns == 'quality' and url == 'overview' %}active{% endif %}" href="{% url 'quality:overview' %}">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>Completeness</a>
+      <a class="side-link {% if ns == 'quality' and url == 'pending' %}active{% endif %}" href="{% url 'quality:pending' %}">
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7-.8 1.3z"/></svg>Pending results</a>
+      <a class="side-link {% if ns == 'quality' and url == 'issues' %}active{% endif %}" href="{% url 'quality:issues' %}">
+        <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>Automatic checks</a>
+      <a class="side-link {% if ns == 'quality' and url == 'queries' %}active{% endif %}" href="{% url 'quality:queries' %}">
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z"/></svg>Queries</a>
+      {% endif %}
+      {% if can.export_deidentified %}
+      <div class="nav-label">Data</div>
+      <a class="side-link {% if ns == 'crf' and url == 'exports' %}active{% endif %}" href="{% url 'crf:exports' %}">
+        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Exports &amp; dictionary</a>
+      {% elif can.view_data %}
+      <div class="nav-label">Data</div>
+      <a class="side-link" href="{% url 'crf:dictionary' %}">
+        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>Data dictionary</a>
+      {% endif %}
+      {% if can.approve_users %}
+      <div class="nav-label">Administration</div>
+      <a class="side-link {% if ns == 'accounts' and url == 'users' or ns == 'accounts' and url == 'user_edit' %}active{% endif %}" href="{% url 'accounts:users' %}">
+        <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Users</a>
+      <a class="side-link {% if ns == 'accounts' and url == 'roles' %}active{% endif %}" href="{% url 'accounts:roles' %}">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Roles</a>
+      {% if user.is_superuser %}<a class="side-link" href="{% url 'admin:index' %}">
+        <svg viewBox="0 0 24 24"><path d="M19.4 13c.04-.32.06-.66.06-1s-.02-.68-.06-1l2.1-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.49.49 0 0 0 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.32-.07.65-.07 1s.03.68.07 1l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64L19.4 13zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>Django admin</a>{% endif %}
+      {% endif %}
+    </nav>
+    <div class="sidebar-user">
+      <a href="{% url 'accounts:profile' %}" class="user-chip">
+        <span class="avatar">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</span>
+        <span class="text-truncate"><strong>{{ user }}</strong><small>{{ user.get_role_display|default:"Superuser" }}</small></span>
+      </a>
+      <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-sm btn-outline-light w-100 mt-2">Log out</button></form>
+    </div>
+  </aside>
+
+  <div class="app-main">
+    <header class="topbar">
+      <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+      </button>
+      <span class="topbar-title text-truncate" id="topbar-title">{{ SITE_NAME }}</span>
+      <div class="dropdown ms-auto">
+        <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">{{ user.first_name|default:user.email }}</button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">My profile</a></li>
+          <li><a class="dropdown-item" href="{% url 'accounts:password_change' %}">Change password</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="dropdown-item">Log out</button></form></li>
+        </ul>
+      </div>
+    </header>
+    <main class="content">
+{% else %}
+<header class="public-bar">
+  <a href="{% url 'login' %}"><span class="brand-mark">D</span> <strong>{{ SITE_NAME }}</strong></a>
+  {% if user.is_authenticated %}
+  <form method="post" action="{% url 'logout' %}" class="ms-auto">{% csrf_token %}<button class="btn btn-sm btn-outline-light">Log out</button></form>
+  {% endif %}
+</header>
+<main class="container px-3 pb-5">
+{% endif %}
+      {% for message in messages %}
+      <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show" role="alert">
+        {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+      {% endfor %}
+      {% block content %}{% endblock %}
+{% if user.is_authenticated and user.is_approved %}
+    </main>
   </div>
-</nav>
-<main class="container-fluid px-3 px-lg-4 pb-5">
-  {% for message in messages %}
-  <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags|default:'info' }}{% endif %} alert-dismissible fade show" role="alert">
-    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-  {% endfor %}
-  {% block content %}{% endblock %}
+</div>
+{% else %}
 </main>
+{% endif %}
+{% endwith %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NuzOb2WaiOCAKfBH3v8PgnyxpMT" crossorigin="anonymous"></script>
+<script>
+  (function () {  // top bar shows the page title (the part of <title> before " · ")
+    var t = document.getElementById('topbar-title');
+    if (t) t.textContent = document.title.split(' · ')[0];
+  })();
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
