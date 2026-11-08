@@ -28,5 +28,6 @@ urlpatterns = [
     path('users/new/', views.UserCreateView.as_view(), name='user_create'),
     path('users/<int:pk>/', views.UserEditView.as_view(), name='user_edit'),
     path('users/<int:pk>/resend/', views.ResendUserVerificationView.as_view(), name='user_resend'),
+    path('users/<int:pk>/activation/', views.UserActivationView.as_view(), name='user_activation'),
     path('roles/', views.RolesView.as_view(), name='roles'),
 ]

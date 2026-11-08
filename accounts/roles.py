@@ -1,10 +1,16 @@
 """Roles and what each one may do.
 
-A person can hold several roles (e.g. Data Manager and Research Scientist / Investigator); they may do anything any
-of their roles allows. Roles are stored as Django groups named after the role labels below.
+A person can hold several roles (e.g. Data Manager and Investigator); they may do anything any of their roles
+allows. Roles are stored as Django groups named after the role labels below.
+
+  Data Clerk          enters and updates records
+  Research Scientist  enters and updates records like a Data Clerk, and exports de-identified data
+  Investigator        view only (records, reports, data quality) and de-identified exports
+  Data Manager        everything about the data, queries, locking, deleting, users below them
+  Admin               everything, including Data Managers, scheduled tasks and restoring deleted records
 
 Who can give which roles:
-  Data Manager  -> Data Clerk, Research Scientist / Investigator
+  Data Manager  -> Data Clerk, Research Scientist, Investigator
   Admin         -> the above and Data Manager
   Superuser     -> all roles, including Admin
 People can also register themselves with their email; they get no role until someone gives them one.
@@ -13,13 +19,15 @@ Only Data Clerks, Data Managers and Admins see MRNs and phone numbers.
 """
 
 DATA_CLERK = 'data_clerk'
+RESEARCH_SCIENTIST = 'research_scientist'
 INVESTIGATOR = 'investigator'
 DATA_MANAGER = 'data_manager'
 ADMIN = 'admin'
 
 ROLE_CHOICES = [
     (DATA_CLERK, 'Data Clerk'),
-    (INVESTIGATOR, 'Research Scientist / Investigator'),
+    (RESEARCH_SCIENTIST, 'Research Scientist'),
+    (INVESTIGATOR, 'Investigator'),
     (DATA_MANAGER, 'Data Manager'),
     (ADMIN, 'Admin'),
 ]
@@ -41,13 +49,15 @@ ACTIONS = {
     'export_deidentified': 'Export data without MRNs or phone numbers',
     'export_identifiable': 'Export data with MRNs and phone numbers',
     'view_audit': 'See the change history (audit trail)',
-    'approve_users': 'Create and approve Data Clerks and Research Scientists / Investigators',
+    'approve_users': 'Create and approve Data Clerks, Research Scientists and Investigators',
     'manage_users': 'Also create and manage Data Managers (Admins are created by a superuser)',
     'manage_tasks': 'See scheduled tasks and sent emails, run a task now',
 }
 
 PERMISSIONS = {
     DATA_CLERK: {'view_data', 'view_identity', 'enter_data', 'view_quality', 'answer_query'},
+    RESEARCH_SCIENTIST: {'view_data', 'view_identity', 'enter_data', 'view_quality', 'answer_query',
+                         'export_deidentified'},
     INVESTIGATOR: {'view_data', 'view_quality', 'export_deidentified'},
     DATA_MANAGER: {'view_data', 'view_identity', 'enter_data', 'view_quality', 'answer_query', 'raise_query',
                    'lock_record', 'delete_record', 'export_deidentified', 'export_identifiable', 'view_audit',
@@ -79,11 +89,11 @@ def user_can(user, action):
 def assignable_roles(actor):
     """Roles this person may give, as [(code, label)]."""
     if actor.is_superuser:
-        allowed = {DATA_CLERK, INVESTIGATOR, DATA_MANAGER, ADMIN}
+        allowed = {DATA_CLERK, RESEARCH_SCIENTIST, INVESTIGATOR, DATA_MANAGER, ADMIN}
     elif ADMIN in user_roles(actor):
-        allowed = {DATA_CLERK, INVESTIGATOR, DATA_MANAGER}
+        allowed = {DATA_CLERK, RESEARCH_SCIENTIST, INVESTIGATOR, DATA_MANAGER}
     elif DATA_MANAGER in user_roles(actor):
-        allowed = {DATA_CLERK, INVESTIGATOR}
+        allowed = {DATA_CLERK, RESEARCH_SCIENTIST, INVESTIGATOR}
     else:
         allowed = set()
     return [(code, label) for code, label in ROLE_CHOICES if code in allowed]

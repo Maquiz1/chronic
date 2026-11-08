@@ -8,9 +8,11 @@ Docker, hosted on the Hostinger server like ncd_penplus (see [DEPLOY.md](DEPLOY.
 
 - **Accounts**: people can register themselves with their email (confirmation link, then approval), or an Admin /
   Data Manager creates the account and the person gets a link to choose a password. Forgot password by email; change
-  password on the profile. A person can hold **several roles**: Data Clerk, Research Scientist / Investigator,
-  Data Manager, Admin. A Data Manager can give Data Clerk and Research Scientist / Investigator; an Admin can also
-  give Data Manager; only a superuser can create Admins. Investigators never see hospital IDs or phone numbers.
+  password on the profile. A person can hold **several roles**: Data Clerk and Research Scientist (enter and update
+  records; Research Scientists also export de-identified data), Investigator (view only), Data Manager, Admin.
+  A Data Manager can give Data Clerk, Research Scientist and Investigator; an Admin can also
+  give Data Manager; only a superuser can create Admins. Investigators never see MRNs or phone numbers. Admins can deactivate and reactivate accounts; a
+  deactivated person is signed out at once. Position is a drop-down title, for display only.
 - **CRF entry**: one page per questionnaire section (A-L). Nothing is mandatory: save what is known and come back
   when laboratory results arrive. Lab and imaging items can be ticked *Not done / not available*. Skip rules hide
   questions that do not apply and clear their answers. Impossible values are refused; results are entered in the

@@ -5,7 +5,7 @@ from io import BytesIO
 
 from django.conf import settings
 from django.core import mail
-from django.test import TestCase, override_settings
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from openpyxl import load_workbook
@@ -91,13 +91,46 @@ class AccountsFlowTests(TestCase):
         other_dm = make_user('data_manager', email='dm2@example.org')
         self.assertEqual(self.client.get(reverse('accounts:user_edit', args=[other_dm.pk])).status_code, 403)
 
+    def test_deactivate_and_reactivate(self):
+        admin, clerk = make_user('admin'), make_user('data_clerk')
+        other = Client()
+        other.force_login(clerk)
+        self.assertEqual(other.get(reverse('crf:list')).status_code, 200)
+        self.client.force_login(admin)
+        self.client.post(reverse('accounts:user_activation', args=[clerk.pk]))
+        clerk.refresh_from_db()
+        self.assertFalse(clerk.is_active)
+        self.assertEqual(clerk.deactivated_by, admin)
+        # Their open session ends at the next click, and they cannot log in
+        self.assertRedirects(other.get(reverse('crf:list')), reverse('login'))
+        r = self.client.get(reverse('accounts:users') + '?status=inactive')
+        self.assertContains(r, clerk.email)
+        self.assertNotContains(self.client.get(reverse('accounts:users')), clerk.email)  # default: active only
+        self.client.post(reverse('accounts:user_activation', args=[clerk.pk]), {'activate': '1'})
+        self.assertTrue(User.objects.get(pk=clerk.pk).is_active)
+        # Nobody deactivates themselves; a Data Manager cannot deactivate an Admin
+        self.assertEqual(self.client.post(reverse('accounts:user_activation', args=[admin.pk])).status_code, 403)
+        self.client.force_login(make_user('data_manager'))
+        self.assertEqual(self.client.post(reverse('accounts:user_activation', args=[admin.pk])).status_code, 403)
+
+    def test_position_dropdown(self):
+        self.client.force_login(make_user('admin'))
+        r = self.client.get(reverse('accounts:user_create'))
+        self.assertContains(r, '<option value="Medical Doctor (MD)">')
+        old = User.objects.create_user('legacy@example.org', PASSWORD, first_name='L', last_name='G', is_active=True,
+                                       position='Resident')
+        set_roles(old, ['data_clerk'])
+        r = self.client.post(reverse('accounts:user_edit', args=[old.pk]), {
+            'first_name': 'L', 'last_name': 'G', 'position': 'Resident', 'roles': ['data_clerk']})
+        self.assertRedirects(r, reverse('accounts:users'))  # an old free-text title still saves
+
     def test_multiple_roles_combine_permissions(self):
         both = make_user('data_clerk', 'investigator')
         self.assertEqual(both.role_codes, {'data_clerk', 'investigator'})
         self.assertTrue(user_can(both, 'enter_data'))           # from Data Clerk
         self.assertTrue(user_can(both, 'export_deidentified'))  # from Investigator
         self.assertFalse(user_can(both, 'raise_query'))
-        self.assertEqual(both.role_labels, 'Data Clerk, Research Scientist / Investigator')
+        self.assertEqual(both.role_labels, 'Data Clerk, Investigator')
 
     @override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
     def test_who_can_create_whom(self):
@@ -105,7 +138,8 @@ class AccountsFlowTests(TestCase):
         data = {'first_name': 'New', 'last_name': 'Person', 'phone': '', 'institution': '', 'position': ''}
         self.client.force_login(make_user('data_manager'))
         r = self.client.get(url)
-        self.assertContains(r, 'Research Scientist / Investigator')
+        self.assertContains(r, 'Research Scientist')
+        self.assertContains(r, 'value="investigator"')
         self.assertNotContains(r, 'value="data_manager"')
         r = self.client.post(url, {**data, 'email': 'a@example.org', 'roles': ['data_manager']})
         self.assertFalse(User.objects.filter(email='a@example.org').exists())
@@ -382,3 +416,26 @@ class DictionaryTests(TestCase):
         used = {f.decision for _s, f in spec.all_fields() if f.decision} | {f.decision for f in spec.HEADER if f.decision}
         used |= {d.decision for d in spec.DERIVED if d.decision}
         self.assertFalse(used - decisions, 'Decision IDs used in spec.py but missing from decisions.py')
+
+
+class RoleSplitTests(TestCase):
+    def test_research_scientist_enters_investigator_views(self):
+        today = timezone.localdate()
+        rs = make_user('research_scientist')
+        self.client.force_login(rs)
+        self.client.post(reverse('crf:create'), {'hospital_id': 'RS-001', 'interview_date': today})
+        p = Participant.objects.get()
+        self.client.post(reverse('crf:section', args=[p.pk, 'A']), {'age_years': '50'})
+        self.assertEqual(SECTION_MODELS['A'].objects.get().age_years, 50)
+        self.assertTrue(user_can(rs, 'export_deidentified'))
+        inv = make_user('investigator')
+        self.client.force_login(inv)
+        self.assertEqual(self.client.post(reverse('crf:section', args=[p.pk, 'A']), {'age_years': '60'}).status_code, 403)
+        self.assertEqual(self.client.get(reverse('crf:create')).status_code, 403)
+        self.assertContains(self.client.get(reverse('crf:section', args=[p.pk, 'A'])), 'View only')
+        dm = make_user('data_manager')
+        self.client.force_login(dm)
+        r = self.client.get(reverse('accounts:user_create'))
+        for code in ('data_clerk', 'research_scientist', 'investigator'):
+            self.assertContains(r, f'value="{code}"')
+        self.assertNotContains(r, 'value="data_manager"')

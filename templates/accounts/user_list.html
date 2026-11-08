@@ -1,40 +1,52 @@
 {% extends 'base.html' %}
 {% block title %}Users{% endblock %}
 {% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-2 gap-2">
   <div class="d-flex align-items-center gap-2">
     <h1 class="h4 mb-0">Users</h1>
     <a class="btn btn-sm btn-primary" href="{% url 'accounts:user_create' %}">+ New user</a>
   </div>
   <form class="d-flex gap-2" method="get">
     <input class="form-control form-control-sm" name="q" value="{{ request.GET.q }}" placeholder="Name or email">
-    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
-      <option value="">All</option>
-      <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Waiting for approval ({{ pending_count }})</option>
-      <option value="unconfirmed" {% if request.GET.status == 'unconfirmed' %}selected{% endif %}>Email not confirmed</option>
-      {% for code, label in roles %}<option value="{{ code }}" {% if request.GET.status == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="Role">
+      <option value="{{ status }}">Any role</option>
+      {% for code, label in roles %}<option value="{{ code }}" {% if status == code %}selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
     <button class="btn btn-sm btn-outline-secondary">Search</button>
   </form>
 </div>
+<ul class="nav nav-pills nav-sm mb-3 small">
+  <li class="nav-item"><a class="nav-link py-1 {% if status == 'active' %}active{% endif %}" href="?status=active">Active ({{ counts.active }})</a></li>
+  <li class="nav-item"><a class="nav-link py-1 {% if status == 'pending' %}active{% endif %}" href="?status=pending">Waiting for approval ({{ pending_count }})</a></li>
+  <li class="nav-item"><a class="nav-link py-1 {% if status == 'inactive' %}active{% endif %}" href="?status=inactive">Inactive ({{ counts.inactive }})</a></li>
+  <li class="nav-item"><a class="nav-link py-1 {% if status == 'unconfirmed' %}active{% endif %}" href="?status=unconfirmed">Email not confirmed ({{ counts.unconfirmed }})</a></li>
+  <li class="nav-item"><a class="nav-link py-1 {% if status == 'all' %}active{% endif %}" href="?status=all">All ({{ counts.all }})</a></li>
+</ul>
 {% if pending_count %}<div class="alert alert-warning py-2">{{ pending_count }} account(s) waiting for a role. <a href="?status=pending">Show them</a>.</div>{% endif %}
 <div class="card"><div class="table-responsive">
 <table class="table table-sm table-hover mb-0">
-  <thead><tr><th>Name</th><th>Email</th><th>Institution / position</th><th>Roles</th><th>Status</th><th>Registered</th><th></th></tr></thead>
+  <thead><tr><th>Name</th><th>Email</th><th>Position · institution</th><th>Roles</th><th>Status</th><th>Registered</th><th></th></tr></thead>
   <tbody>
   {% for u in object_list %}
   <tr>
     <td>{{ u.get_full_name|default:"—" }}</td><td>{{ u.email }}</td>
-    <td class="small">{{ u.institution }}{% if u.position %} · {{ u.position }}{% endif %}</td>
+    <td class="small">{{ u.position|default:"" }}{% if u.position and u.institution %} · {% endif %}{{ u.institution }}</td>
     <td class="small">{% for g in u.groups.all %}<span class="badge text-bg-light border me-1">{{ g.name }}</span>{% empty %}{% if not u.is_superuser %}—{% endif %}{% endfor %}{% if u.is_superuser %}<span class="badge text-bg-dark">superuser</span>{% endif %}</td>
     <td><span class="badge text-bg-{% if u.status_label == 'Active' %}success{% elif u.status_label == 'Waiting for approval' %}warning{% else %}secondary{% endif %}">{{ u.status_label }}</span></td>
-    <td class="small">{{ u.date_joined|date:"d M Y" }}</td>
+    <td class="small">{{ u.date_joined|date:"d M Y" }}{% if not u.is_active and u.deactivated_at %}<div class="text-danger">deactivated {{ u.deactivated_at|date:"d M Y" }}{% if u.deactivated_by %} by {{ u.deactivated_by }}{% endif %}</div>{% endif %}</td>
     <td class="text-end text-nowrap">
       {% if u.pk in manageable %}
         {% if not u.email_verified %}
         <form method="post" action="{% url 'accounts:user_resend' u.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-link">Resend link</button></form>
         {% endif %}
+        {% if u.is_active %}
         <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:user_edit' u.pk %}">{% if u.status_label == 'Waiting for approval' %}Approve{% else %}Edit{% endif %}</a>
+        <form method="post" action="{% url 'accounts:user_activation' u.pk %}" class="d-inline" onsubmit="return confirm('Deactivate {{ u|escapejs }}? They will be signed out and cannot log in until reactivated.')">{% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}"><button class="btn btn-sm btn-outline-danger">Deactivate</button></form>
+        {% elif u.email_verified %}
+        <form method="post" action="{% url 'accounts:user_activation' u.pk %}" class="d-inline">{% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.get_full_path }}"><input type="hidden" name="activate" value="1"><button class="btn btn-sm btn-outline-success">Reactivate</button></form>
+        {% endif %}
       {% endif %}
     </td>
   </tr>

@@ -15,7 +15,22 @@ def bootstrapify(form):
             w.attrs.setdefault('class', 'form-control')
 
 
+def position_dropdown(form):
+    """Show "position" as a drop-down of titles, keeping a stored title that is not (or no longer) in the list."""
+    from .models import POSITIONS
+    field = form.fields.get('position')
+    if field is None:
+        return
+    choices = [('', '---------')] + [(p, p) for p in POSITIONS]
+    current = getattr(getattr(form, 'instance', None), 'position', '') or ''
+    if current and current not in POSITIONS:
+        choices.append((current, current))
+    form.fields['position'] = forms.ChoiceField(choices=choices, required=False, label=field.label,
+                                                help_text=field.help_text)
+
+
 class BootstrapFormMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        position_dropdown(self)
         bootstrapify(self)

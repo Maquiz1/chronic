@@ -26,6 +26,16 @@ class UserManager(BaseUserManager):
         return self._create_user(email, password, **extra)
 
 
+# Job title, for display only (permissions come from roles). Offered as a drop-down on the forms; stored as text so
+# the list can change without a migration and older titles stay valid.
+POSITIONS = [
+    'Principal Investigator', 'Co-Investigator', 'Investigator', 'Research Scientist', 'Study Coordinator',
+    'Medical Doctor (MD)', 'Specialist / Consultant', 'Resident', 'Clinician', 'Clinical Officer', 'Nurse',
+    'Laboratory Technologist', 'Radiographer / Sonographer', 'Pharmacist', 'Data Manager', 'Data Clerk',
+    'Statistician', 'Research Assistant', 'Monitor / Auditor', 'Student', 'Other',
+]
+
+
 class User(AbstractUser):
     """Account identified by email. A role is given by an Admin or Data Manager after registration."""
 
@@ -33,7 +43,10 @@ class User(AbstractUser):
     email = models.EmailField('email address', unique=True)
     phone = models.CharField(max_length=30, blank=True)
     institution = models.CharField('institution / department', max_length=150, blank=True)
-    position = models.CharField('position', max_length=100, blank=True, help_text='E.g. Resident, Research assistant.')
+    position = models.CharField('position / title', max_length=100, blank=True,
+                                help_text='Job title, shown next to the name. It does not change what the person can do.')
+    deactivated_at = models.DateTimeField(null=True, blank=True)
+    deactivated_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     email_verified = models.BooleanField(default=False)
     approved_at = models.DateTimeField(null=True, blank=True)
     approved_by = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
@@ -61,7 +74,7 @@ class User(AbstractUser):
 
     @property
     def role_labels(self):
-        """Roles as text, in the standard order, e.g. 'Data Manager, Research Scientist / Investigator'."""
+        """Roles as text, in the standard order, e.g. 'Data Manager, Investigator'."""
         labels = [label for code, label in ROLE_LABELS.items() if code in self.role_codes]
         if self.is_superuser:
             labels.append('Superuser')

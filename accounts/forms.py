@@ -74,8 +74,7 @@ class UserAdminForm(RolesFieldMixin, BootstrapFormMixin, forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'phone', 'institution', 'position', 'is_active']
-        labels = {'is_active': 'Account active (can log in)'}
+        fields = ['first_name', 'last_name', 'phone', 'institution', 'position']
 
     def __init__(self, *args, allowed_roles=(), **kwargs):
         super().__init__(*args, **kwargs)

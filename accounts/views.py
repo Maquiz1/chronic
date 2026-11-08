@@ -122,8 +122,12 @@ class UserListView(RoleRequiredMixin, ListView):
         q = self.request.GET.get('q', '').strip()
         if q:
             qs = qs.filter(Q(email__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q))
-        status = self.request.GET.get('status')
-        if status == 'pending':
+        status = self.request.GET.get('status', 'active')
+        if status == 'active':
+            qs = qs.filter(is_active=True)
+        elif status == 'inactive':
+            qs = qs.filter(is_active=False, email_verified=True)
+        elif status == 'pending':
             qs = _pending(qs)
         elif status == 'unconfirmed':
             qs = qs.filter(email_verified=False)
@@ -134,6 +138,11 @@ class UserListView(RoleRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['pending_count'] = _pending(User.objects.all()).count()
+        ctx['status'] = self.request.GET.get('status', 'active')
+        ctx['counts'] = {'active': User.objects.filter(is_active=True).count(),
+                         'inactive': User.objects.filter(is_active=False, email_verified=True).count(),
+                         'unconfirmed': User.objects.filter(email_verified=False).count(),
+                         'all': User.objects.count()}
         ctx['manageable'] = {u.pk for u in ctx['object_list'] if can_manage(self.request.user, u)}
         ctx['roles'] = ROLE_CHOICES
         ctx['assignable'] = assignable_roles(self.request.user)
@@ -196,6 +205,27 @@ class UserEditView(RoleRequiredMixin, UpdateView):
         else:
             messages.success(self.request, f'{user} saved.')
         return response
+
+
+class UserActivationView(RoleRequiredMixin, View):
+    """Deactivate an account (the person can no longer log in and is signed out) or reactivate it."""
+
+    action = USER_ADMIN
+
+    def post(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        if not can_manage(request.user, user) or user == request.user:
+            raise PermissionDenied
+        if request.POST.get('activate'):
+            user.is_active, user.deactivated_at, user.deactivated_by = True, None, None
+            user.save(update_fields=['is_active', 'deactivated_at', 'deactivated_by'])
+            messages.success(request, f'{user} reactivated: they can log in again with their roles.')
+        else:
+            user.is_active, user.deactivated_at, user.deactivated_by = False, timezone.now(), request.user
+            user.save(update_fields=['is_active', 'deactivated_at', 'deactivated_by'])
+            messages.success(request, f'{user} deactivated: they cannot log in. Their records and history are kept; '
+                                      f'reactivate them from the Inactive list.')
+        return redirect(request.POST.get('next') or reverse('accounts:users'))
 
 
 class ResendUserVerificationView(RoleRequiredMixin, View):
