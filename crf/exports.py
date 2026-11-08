@@ -75,7 +75,8 @@ QUALITY_COLUMNS = ['completeness_pct', 'section_status', 'missing_count', 'missi
 
 
 def _write_sheet(ws, rows, code, identifiable):
-    header = ['study_id', 'interview_date', 'admission_date', 'interviewer'] + (['phone_number'] if identifiable else [])
+    header = ['study_id', 'interview_date', 'admission_date', 'interviewer'] + (
+        ['hospital_id', 'phone_number'] if identifiable else [])
     crf_columns, derived_columns = _part(code)
     tail = ['locked', 'last_updated']
     ws.append(header + crf_columns + derived_columns + QUALITY_COLUMNS + tail)
@@ -85,7 +86,7 @@ def _write_sheet(ws, rows, code, identifiable):
         p, v = item['p'], item['v']
         row = [p.study_id, p.interview_date, p.admission_date, p.interviewer.email]
         if identifiable:
-            row.append(p.phone_number)
+            row += [p.hospital_id, p.phone_number]
         row += [_cell(v.get(c)) for c in crf_columns]
         row += [item['scores'][c] for c in derived_columns]
         row += _quality(item, code)
@@ -104,7 +105,8 @@ def _notes(wb, identifiable, scope):
         ['Blank cells', 'Not entered yet, skipped by a skip rule, or marked "not done" (listed in not_done_items).'],
         ['Quality columns', 'Completeness and checks for the part shown on the sheet (the whole record on a '
                             'combined sheet, one section on a section sheet).'],
-        ['Identifiable', 'Yes (contains phone numbers): store securely' if identifiable else 'No'],
+        ['Identifiable', 'Yes (contains hospital IDs and phone numbers): store securely' if identifiable
+         else 'No (no hospital IDs or phone numbers)'],
     ]:
         notes.append(row)
     notes.column_dimensions['A'].width = 24

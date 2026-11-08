@@ -147,6 +147,8 @@ def consistency_issues(values):
             add(WARNING, 'Header', 'interview_date', f'Date of interview is before the study start ({start}).', 'date_start')
     if admission and interview and admission > interview:
         add(ERROR, 'Header', 'admission_date', 'Admission date is after the interview date.', 'adm_after_int')
+    if not v.get('hospital_id') and 'hospital_id' in v:
+        add(ERROR, 'Header', 'hospital_id', 'Hospital ID is missing (required). Add it with "Edit header".', 'hosp_id')
     if not admission:
         add(WARNING, 'Header', 'admission_date', 'Admission date is missing (needed for length of stay).', 'adm_missing')
     if outcome_date and admission and outcome_date < admission:

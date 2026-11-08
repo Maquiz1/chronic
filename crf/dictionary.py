@@ -77,7 +77,7 @@ def _dictionary_rows(section=None):
     for f in (spec.HEADER if section is None else []):
         n += 1
         rows.append([n, 'Header', 'Questionnaire header', f.name, f.qn, f.label, f.type, '', f.unit, '', '', '', '', '',
-                     'Yes' if f.name in ('study_id', 'interview_date') else 'No', '', '', f.crf_wording, f.status,
+                     'Yes' if f.name in ('study_id', 'hospital_id', 'interview_date') else 'No', '', '', f.crf_wording, f.status,
                      f.decision, f.notes])
     for section in _in_scope(section):
         if not section.fields:

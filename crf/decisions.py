@@ -44,6 +44,11 @@ DECISIONS = [
      'cause of death.', 'PI', '', 'Open'),
 
     # --- Medium: definitions and coding ---
+    ('D35', 'Medium', 'Hospital ID', 'H1a', 'The hospital registration number is recorded for every patient and is '
+     'required before a participant can be registered, but it is not printed on the CRF, and its format is not '
+     'stated. The MNH system shows both an MR number (one per patient) and an IP number (one per admission).',
+     'Required and unique; letters, digits, "-", "/" and "." accepted, stored in capitals. Proposed: use the MR '
+     'number (stays the same across admissions) and add a "Hospital ID" line to the CRF header.', 'PI', '', 'Open'),
     ('D01', 'Medium', 'Study ID', 'H1', 'Study ID format not given.', 'System generates CLD-0001, CLD-0002, ... when '
      'a participant is registered. Change the prefix in .env (STUDY_ID_PREFIX) if needed.', 'PI', '', 'Open'),
     ('D06', 'Medium', 'Skip logic', 'B1', 'If "Ever diagnosed with CLD" is No, should B2 be skipped? (Assumed yes.) '

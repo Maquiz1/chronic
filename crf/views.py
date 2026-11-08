@@ -63,7 +63,7 @@ class ParticipantListView(RoleRequiredMixin, ListView):
         if q:
             cond = Q(study_id__icontains=q)
             if user_can(self.request.user, 'view_identity'):
-                cond |= Q(phone_number__icontains=q)
+                cond |= Q(phone_number__icontains=q) | Q(hospital_id__icontains=q)
             qs = qs.filter(cond)
         if self.request.GET.get('locked') == '1':
             qs = qs.filter(locked=True)
@@ -158,7 +158,7 @@ class ParticipantEditView(RoleRequiredMixin, ParticipantMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_form_kwargs(self):
-        return {**super().get_form_kwargs(), 'show_phone': user_can(self.request.user, 'view_identity')}
+        return {**super().get_form_kwargs(), 'show_identity': user_can(self.request.user, 'view_identity')}
 
     def form_valid(self, form):
         messages.success(self.request, 'Saved.')
@@ -286,7 +286,7 @@ class HistoryView(RoleRequiredMixin, ParticipantMixin, TemplateView):
                 if previous is not None:
                     delta = record.diff_against(previous)
                     for change in delta.changes:
-                        if change.field == 'phone_number' and not show_phone:
+                        if change.field in ('phone_number', 'hospital_id') and not show_phone:
                             changes.append((change.field, '•••', '•••'))
                         else:
                             changes.append((change.field, change.old, change.new))

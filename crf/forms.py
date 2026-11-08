@@ -1,7 +1,10 @@
+import re
 from decimal import Decimal
 
 from django import forms
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import format_html
 
 from accounts.widgets import BootstrapFormMixin, bootstrapify
 
@@ -9,21 +12,46 @@ from . import spec
 from .models import SECTION_COLUMNS, SECTION_MODELS, Participant
 
 RADIO_MAX_OPTIONS = 4
+HOSPITAL_ID_PATTERN = re.compile(r'^[A-Z0-9][A-Z0-9/\-. ]{1,28}[A-Z0-9]$')
+
+
+def normalise_hospital_id(value):
+    """Upper case, single spaces, no spaces around - or /, so the same number is always stored the same way."""
+    value = re.sub(r'\s+', ' ', (value or '').strip().upper())
+    return re.sub(r'\s*([-/])\s*', r'\1', value)
 
 
 class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = Participant
-        fields = ['interview_date', 'admission_date', 'phone_number']
+        fields = ['hospital_id', 'interview_date', 'admission_date', 'phone_number']
         widgets = {'interview_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-                   'admission_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d')}
-        help_texts = {'phone_number': 'Optional. Visible only to Data Clerks, Data Managers and Admins.',
+                   'admission_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
+                   'hospital_id': forms.TextInput(attrs={'autofocus': True, 'autocomplete': 'off',
+                                                         'style': 'text-transform: uppercase'})}
+        help_texts = {'hospital_id': 'Required. The patient\'s MNH registration number from the hospital system. '
+                                     'Visible only to Data Clerks, Data Managers and Admins.',
+                      'phone_number': 'Optional. Visible only to Data Clerks, Data Managers and Admins.',
                       'admission_date': 'Can be added later.'}
+        error_messages = {'hospital_id': {'unique': 'This Hospital ID is already registered.'}}
 
-    def __init__(self, *args, show_phone=True, **kwargs):
+    def __init__(self, *args, show_identity=True, **kwargs):
         super().__init__(*args, **kwargs)
-        if not show_phone:
+        self.fields['hospital_id'].required = True
+        if not show_identity:
             del self.fields['phone_number']
+            del self.fields['hospital_id']
+
+    def clean_hospital_id(self):
+        value = normalise_hospital_id(self.cleaned_data.get('hospital_id'))
+        if not HOSPITAL_ID_PATTERN.match(value):
+            raise forms.ValidationError('Use 3-30 letters, digits, "-", "/" or "." (as printed in the hospital system).')
+        existing = Participant.objects.filter(hospital_id=value).exclude(pk=self.instance.pk).first()
+        if existing:
+            raise forms.ValidationError(format_html(
+                'Hospital ID {} is already registered as <a href="{}">{}</a>. Open that record instead of registering '
+                'the patient again.', value, reverse('crf:detail', args=[existing.pk]), existing.study_id))
+        return value
 
     def clean(self):
         data = super().clean()

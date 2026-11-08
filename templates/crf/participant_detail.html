@@ -6,6 +6,7 @@
   <div>
     <h1 class="h3 mb-0">{{ participant.study_id }}
       {% if participant.locked %}<span class="badge text-bg-dark fs-6 align-middle">Verified &amp; locked</span>{% endif %}</h1>
+    {% if can.view_identity %}<div class="fw-semibold">Hospital ID: {% if participant.hospital_id %}{{ participant.hospital_id }}{% else %}<span class="text-danger">missing (required): use Edit header</span>{% endif %}</div>{% endif %}
     <div class="text-muted small">Interview {{ participant.interview_date|date:"d M Y" }} · admitted {{ participant.admission_date|date:"d M Y"|default:"(date missing)" }}
       · by {{ participant.interviewer }}{% if can.view_identity and participant.phone_number %} · phone {{ participant.phone_number }}{% endif %}
       {% if participant.locked %}<br>Locked by {{ participant.locked_by }} on {{ participant.locked_at|date:"d M Y H:i" }}{% endif %}</div>

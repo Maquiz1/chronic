@@ -88,14 +88,32 @@ class EntryTests(TestCase):
         self.clerk = make_user('data_clerk')
         self.client.force_login(self.clerk)
         today = timezone.localdate()
-        r = self.client.post(reverse('crf:create'), {'interview_date': today, 'admission_date': today - datetime.timedelta(days=2),
+        r = self.client.post(reverse('crf:create'), {'hospital_id': 'm10-20-30', 'interview_date': today,
+                                                     'admission_date': today - datetime.timedelta(days=2),
                                                      'phone_number': '0712000000'})
         self.p = Participant.objects.get()
         self.assertEqual(self.p.study_id, 'CLD-0001')
+        self.assertEqual(self.p.hospital_id, 'M10-20-30')  # stored in capitals
         self.assertRedirects(r, reverse('crf:section', args=[self.p.pk, 'A']))
 
     def section_url(self, code):
         return reverse('crf:section', args=[self.p.pk, code])
+
+    def test_hospital_id_required_and_unique(self):
+        today = timezone.localdate()
+        r = self.client.post(reverse('crf:create'), {'interview_date': today})
+        self.assertContains(r, 'This field is required')
+        r = self.client.post(reverse('crf:create'), {'hospital_id': ' M10 - 20 - 30 ', 'interview_date': today})
+        self.assertContains(r, 'is already registered as')
+        self.assertContains(r, reverse('crf:detail', args=[self.p.pk]))
+        r = self.client.post(reverse('crf:create'), {'hospital_id': '<b>', 'interview_date': today})
+        self.assertContains(r, 'Use 3-30 letters')
+        self.assertEqual(Participant.objects.count(), 1)
+        self.client.post(reverse('crf:create'), {'hospital_id': 'M10-20-31', 'interview_date': today})
+        self.assertEqual(Participant.objects.count(), 2)
+        r = self.client.get(reverse('crf:list') + '?q=20-31')
+        self.assertContains(r, 'CLD-0002')
+        self.assertNotContains(r, 'CLD-0001')
 
     def test_partial_save_then_complete_later(self):
         # Only haemoglobin known today; INR not done; the rest pending.
@@ -141,6 +159,7 @@ class EntryTests(TestCase):
         self.client.force_login(make_user('investigator'))
         r = self.client.get(reverse('crf:detail', args=[self.p.pk]))
         self.assertNotContains(r, '0712000000')
+        self.assertNotContains(r, 'M10-20-30')
         self.assertEqual(self.client.get(self.section_url('A')).status_code, 403)
         r = self.client.get(reverse('crf:export'))
         wb = load_workbook(BytesIO(r.content))
@@ -166,6 +185,7 @@ class EntryTests(TestCase):
         self.assertEqual(wb.sheetnames, [f'section_{s.code}' for s in spec.SECTIONS] + ['notes'])
         self.assertIn('meld_na', [c.value for c in wb['section_J'][1]])
         self.assertIn('phone_number', [c.value for c in wb['section_A'][1]])
+        self.assertIn('hospital_id', [c.value for c in wb['section_A'][1]])
         wb = load_workbook(BytesIO(self.client.get(url + '?scope=combined').content))
         header = [c.value for c in wb['all_sections'][1]]
         self.assertIn('age_years', header)

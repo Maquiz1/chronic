@@ -15,6 +15,9 @@ from . import spec
 
 class Participant(models.Model):
     study_id = models.CharField('Study ID', max_length=30, unique=True, editable=False)
+    # Required by the form; nullable only so records made before this field existed can be migrated and then filled.
+    hospital_id = models.CharField('Hospital ID', max_length=30, unique=True, null=True,
+                                   help_text='MNH registration number of the patient (unique in the hospital system).')
     interview_date = models.DateField('Date of interview')
     admission_date = models.DateField('Date of admission', null=True, blank=True)
     phone_number = models.CharField('Patient phone number', max_length=30, blank=True)
@@ -57,7 +60,8 @@ class Participant(models.Model):
     def values(self):
         """All entered values as {column: value}, including header fields."""
         data = {'study_id': self.study_id, 'interview_date': self.interview_date,
-                'admission_date': self.admission_date, 'phone_number': self.phone_number}
+                'admission_date': self.admission_date, 'phone_number': self.phone_number,
+                'hospital_id': self.hospital_id}
         for code in SECTION_MODELS:
             row = self.section(code)
             for column in SECTION_COLUMNS[code]:
