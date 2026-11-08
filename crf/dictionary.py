@@ -33,8 +33,23 @@ CHANGE_LOG = [
 ]
 
 
-def dictionary_filename():
-    return f'DCLD_Data_Dictionary_v{spec.VERSION}.xlsx'
+def dictionary_filename(section=None):
+    suffix = f'_Section_{section}' if section else ''
+    return f'DCLD_Data_Dictionary_v{spec.VERSION}{suffix}.xlsx'
+
+
+def _in_scope(section):
+    """Sections included: all, or just the one asked for."""
+    return [s for s in spec.SECTIONS if section is None or s.code == section]
+
+
+def _decisions_for(section):
+    if section is None:
+        return list(decisions_mod.DECISIONS)
+    s = spec.SECTION_BY_CODE[section]
+    ids = {f.decision for f in s.fields if f.decision} | {d.decision for d in spec.DERIVED
+                                                           if d.section == section and d.decision}
+    return [d for d in decisions_mod.DECISIONS if d[0] in ids or d[1] == 'Example']
 
 
 def _table(ws, headers, rows, widths, start_row=1, wrap_cols=()):
@@ -57,14 +72,14 @@ def _range_text(r):
     return f'{r[0]:g}-{r[1]:g}' if r else ''
 
 
-def _dictionary_rows():
+def _dictionary_rows(section=None):
     rows, n = [], 0
-    for f in spec.HEADER:
+    for f in (spec.HEADER if section is None else []):
         n += 1
         rows.append([n, 'Header', 'Questionnaire header', f.name, f.qn, f.label, f.type, '', f.unit, '', '', '', '', '',
                      'Yes' if f.name in ('study_id', 'interview_date') else 'No', '', '', f.crf_wording, f.status,
                      f.decision, f.notes])
-    for section in spec.SECTIONS:
+    for section in _in_scope(section):
         if not section.fields:
             n += 1
             rows.append([n, section.code, section.title, '(calculated)', '', section.note, 'calculated', '', '', '', '',
@@ -88,16 +103,24 @@ def _dictionary_rows():
     return rows
 
 
-def build_workbook():
+def build_workbook(section=None):
+    """The whole dictionary, or only one section (section='A' ... 'L')."""
+    if section is not None and section not in spec.SECTION_BY_CODE:
+        raise ValueError(f'Unknown section {section}')
+    scope = 'All sections' if section is None else f'Section {section} only: {spec.SECTION_BY_CODE[section].title}'
+    in_scope = _in_scope(section)
+    decisions = _decisions_for(section)
     wb = Workbook()
 
     # README -------------------------------------------------------------------------------------------------------
     ws = wb.active
     ws.title = 'README'
-    open_high = sum(1 for d in decisions_mod.DECISIONS if d[1] == 'High' and d[8] == 'Open')
+    open_high = sum(1 for d in decisions if d[1] == 'High' and d[8] == 'Open')
     lines = [
         ('DCLD Study: Data Dictionary', None),
         (f'Version {spec.VERSION}, DRAFT, {spec.VERSION_DATE}. {open_high} High decisions open.', None),
+        ('Contents', scope + ('' if section is None else '. Decisions, choices and derived values are limited to '
+                              'this section; download "All sections" for the full workbook.')),
         (None, None),
         ('Study', spec.STUDY_TITLE),
         ('Purpose', 'Lists every variable on the questionnaire with its code, label, type, codes, units, limits and '
@@ -123,7 +146,7 @@ def build_workbook():
         ('Data Dictionary', 'One row per question.'),
         ('Choices', 'Code lists.'),
         ('Derived Scores', 'Values the system calculates: BMI, unit conversions, Child-Pugh, MELD-Na, APRI, K1-K2.'),
-        ('Reference Ranges', 'Units and limits for every laboratory test, with their source.'),
+        ('Reference Ranges', 'Units and limits for every laboratory test, with their source (Section G).'),
         ('Decisions', 'Problems found in the CRF, what the system does for now, and who decides.'),
         ('Change Log', 'What changed in each version.'),
     ]
@@ -140,8 +163,8 @@ def build_workbook():
     # Sections ------------------------------------------------------------------------------------------------------
     ws = wb.create_sheet('Sections')
     rows = [['Header', 'Questionnaire header (Study ID, dates, interviewer, phone)', len(spec.HEADER), '',
-             'Entered when the participant is registered.']]
-    for s in spec.SECTIONS:
+             'Entered when the participant is registered.']] if section is None else []
+    for s in in_scope:
         rows.append([s.code, s.title, f"=COUNTIF('Data Dictionary'!$B:$B,A{len(rows) + 2})",
                      sum(1 for d in spec.DERIVED if d.section == s.code), s.note])
     _table(ws, ['Section', 'Title', 'Variables', 'Derived values', 'Note'], rows, [10, 50, 11, 14, 70])
@@ -152,7 +175,7 @@ def build_workbook():
                'Decimals', 'Hard limits (refused)', 'Check limits (flagged)', 'Reference range', 'Can be "Not done"',
                'Required to save', 'Counts for completeness', 'Relevance (skip rule)', 'CRF wording (if changed)',
                'Status', 'Decision', 'Notes']
-    rows = _dictionary_rows()
+    rows = _dictionary_rows(section)
     _table(ws, headers, rows, [5, 8, 22, 22, 6, 45, 12, 14, 12, 8, 20, 20, 20, 9, 9, 11, 28, 26, 18, 9, 50])
     ws.freeze_panes = 'E2'
     for r in range(2, len(rows) + 2):
@@ -162,22 +185,22 @@ def build_workbook():
 
     # Choices -------------------------------------------------------------------------------------------------------
     ws = wb.create_sheet('Choices')
+    used = {f.choices for s in in_scope for f in s.fields if f.choices}
     rows = [[name, code, label, 'Code proposed' if isinstance(code, int) else 'Column suffix']
-            for name, items in spec.CHOICES.items() for code, label in items]
+            for name, items in spec.CHOICES.items() if section is None or name in used for code, label in items]
     _table(ws, ['List', 'Code', 'Label (English)', 'Status'], rows, [18, 22, 40, 16])
 
     # Derived -------------------------------------------------------------------------------------------------------
     ws = wb.create_sheet('Derived Scores')
     rows = [[d.name, d.section, d.label, d.calculation, d.unit, d.range, d.interpretation, d.source, d.status,
-             d.decision] for d in spec.DERIVED]
+             d.decision] for d in spec.DERIVED if section is None or d.section == section]
     _table(ws, ['Variable', 'Section', 'Description', 'Calculation', 'Unit', 'Range', 'Interpretation', 'Source',
                 'Status', 'Decision'], rows, [18, 8, 32, 60, 9, 9, 34, 26, 24, 9])
 
-    # Reference ranges ----------------------------------------------------------------------------------------------
-    ws = wb.create_sheet('Reference Ranges')
+    # Reference ranges (laboratory tests are all in Section G) ------------------------------------------------------
     rows = []
-    for section, f in spec.all_fields():
-        if f.type not in ('integer', 'decimal') or section.code != 'G':
+    for sec, f in spec.all_fields():
+        if f.type not in ('integer', 'decimal') or sec.code != 'G' or section not in (None, 'G'):
             continue
         source = 'MNH Jeeva (units2.jpeg)' if 'Jeeva' in f.notes else 'Proposed - confirm with MNH lab'
         configs = f.by_unit.values() if f.by_unit else [{'unit': f.unit, 'hard': f.hard, 'check': f.check, 'ref': f.ref}]
@@ -189,14 +212,16 @@ def build_workbook():
                 src = 'MNH Jeeva (units2.jpeg)'
             rows.append([f.qn, f.label, cfg['unit'], cfg['ref'][0] if cfg['ref'] else '', cfg['ref'][1] if cfg['ref'] else '',
                          _range_text(cfg['check']), _range_text(cfg['hard']), src])
-    _table(ws, ['Qn', 'Test', 'Unit', 'Lower limit', 'Upper limit', 'Check limits', 'Hard limits', 'Source'], rows,
-           [6, 26, 12, 12, 12, 14, 14, 36])
+    if rows:
+        ws = wb.create_sheet('Reference Ranges')
+        _table(ws, ['Qn', 'Test', 'Unit', 'Lower limit', 'Upper limit', 'Check limits', 'Hard limits', 'Source'], rows,
+               [6, 26, 12, 12, 12, 14, 14, 36])
 
     # Decisions -----------------------------------------------------------------------------------------------------
     ws = wb.create_sheet('Decisions')
     ws.cell(1, 1, 'Answer in the yellow columns and change Status to Answered. Row 3 is an example only. '
                   'IDs stay the same between versions, so some numbers are not used.').font = Font(italic=True)
-    rows = [list(d[:7]) + [d[7], '', d[8]] for d in decisions_mod.DECISIONS]
+    rows = [list(d[:7]) + [d[7], '', d[8]] for d in decisions]
     _table(ws, ['ID', 'Priority', 'Area', 'CRF item', 'Problem found', 'What the system does now / proposal',
                 'Who decides', 'Answer', 'Answered by', 'Status'], rows, [6, 9, 18, 14, 70, 60, 16, 40, 18, 11],
            start_row=2)

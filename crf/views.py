@@ -304,9 +304,17 @@ class ExportView(RoleRequiredMixin, View):
         identifiable = request.GET.get('identifiable') == '1'
         if identifiable and not user_can(request.user, 'export_identifiable'):
             raise PermissionDenied
-        wb = export_workbook(participants_with_sections(), identifiable=identifiable)
+        scope = request.GET.get('scope', 'combined')  # combined | sheets | a section code
+        if scope in ('combined', 'sheets'):
+            layout, section, part = scope, None, 'all_sections' if scope == 'combined' else 'by_section'
+        elif scope.upper() in spec.SECTION_BY_CODE:
+            layout, section = 'section', scope.upper()
+            part = f'section_{section}'
+        else:
+            raise Http404
+        wb = export_workbook(participants_with_sections(), identifiable=identifiable, layout=layout, section=section)
         stamp = timezone.localtime().strftime('%Y%m%d_%H%M')
-        name = f'dcld_export_{"identifiable_" if identifiable else ""}{stamp}.xlsx'
+        name = f'dcld_{part}_{"identifiable_" if identifiable else ""}{stamp}.xlsx'
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = f'attachment; filename="{name}"'
         wb.save(response)
@@ -317,12 +325,20 @@ class DictionaryView(RoleRequiredMixin, View):
     action = 'view_data'
 
     def get(self, request):
+        section = request.GET.get('section', '').upper() or None
+        if section is not None and section not in spec.SECTION_BY_CODE:
+            raise Http404
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename="{dictionary_filename()}"'
-        build_workbook().save(response)
+        response['Content-Disposition'] = f'attachment; filename="{dictionary_filename(section)}"'
+        build_workbook(section).save(response)
         return response
 
 
 class ExportsPageView(RoleRequiredMixin, TemplateView):
-    action = ('export_deidentified', 'export_identifiable')
+    """Exports for those allowed; everyone with data access can download the dictionary from here."""
+
+    action = 'view_data'
     template_name = 'crf/exports.html'
+
+    def get_context_data(self, **kwargs):
+        return {**super().get_context_data(**kwargs), 'sections': spec.SECTIONS}

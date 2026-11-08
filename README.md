@@ -20,8 +20,10 @@ Docker, hosted on the Hostinger server like ncd_penplus (see [DEPLOY.md](DEPLOY.
   in Section D but No in Section H, a creatinine that looks like the wrong unit), and queries: a Data Manager raises,
   the Data Clerk answers, the Data Manager closes. A Data Manager can verify and lock a finished record.
 - **Audit trail**: every change to every value, with who and when (Change history on the participant page).
-- **Exports**: Excel, one row per participant with coded values, scores and quality columns; with or without phone numbers.
-- **Data dictionary**: `data_dictionary/DCLD_Data_Dictionary_v<version>.xlsx`, also downloadable in the app.
+- **Exports**: Excel, one row per participant with coded values, scores and quality columns; with or without phone
+  numbers. Choose all sections combined on one sheet, all sections with one sheet per section, or a single section.
+- **Data dictionary**: `data_dictionary/DCLD_Data_Dictionary_v<version>.xlsx`, also downloadable in the app, either
+  complete or for a single section (`build_dictionary --section G`, or `--all-sections` for one file per section).
 
 ## One source for the CRF
 

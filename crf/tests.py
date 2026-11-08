@@ -144,8 +144,47 @@ class EntryTests(TestCase):
         self.assertEqual(self.client.get(self.section_url('A')).status_code, 403)
         r = self.client.get(reverse('crf:export'))
         wb = load_workbook(BytesIO(r.content))
-        self.assertNotIn('phone_number', [c.value for c in wb['data'][1]])
+        self.assertNotIn('phone_number', [c.value for c in wb['all_sections'][1]])
         self.assertEqual(self.client.get(reverse('crf:export') + '?identifiable=1').status_code, 403)
+
+    def test_exports_by_section_and_combined(self):
+        self.client.post(self.section_url('G'), {'hb': '9.8', 'inr': '1.9', 'nd__ggt': 'on'})
+        self.client.force_login(make_user('data_manager'))
+        url = reverse('crf:export')
+        wb = load_workbook(BytesIO(self.client.get(url + '?scope=G').content))
+        self.assertEqual(wb.sheetnames, ['section_G', 'notes'])
+        header = [c.value for c in wb['section_G'][1]]
+        self.assertIn('inr', header)
+        self.assertIn('apri', header)            # Section G calculated value
+        self.assertNotIn('age_years', header)    # Section A column not included
+        self.assertNotIn('phone_number', header)
+        row = dict(zip(header, [c.value for c in wb['section_G'][2]]))
+        self.assertEqual(row['inr'], 1.9)
+        self.assertEqual(row['not_done_items'], 'ggt')
+        self.assertEqual(row['section_status'], 'incomplete')
+        wb = load_workbook(BytesIO(self.client.get(url + '?scope=sheets&identifiable=1').content))
+        self.assertEqual(wb.sheetnames, [f'section_{s.code}' for s in spec.SECTIONS] + ['notes'])
+        self.assertIn('meld_na', [c.value for c in wb['section_J'][1]])
+        self.assertIn('phone_number', [c.value for c in wb['section_A'][1]])
+        wb = load_workbook(BytesIO(self.client.get(url + '?scope=combined').content))
+        header = [c.value for c in wb['all_sections'][1]]
+        self.assertIn('age_years', header)
+        self.assertIn('inr', header)
+        self.assertEqual(self.client.get(url + '?scope=Z').status_code, 404)
+
+    def test_dictionary_by_section(self):
+        wb = load_workbook(BytesIO(self.client.get(reverse('crf:dictionary') + '?section=G').content))
+        sections = {r[1] for r in wb['Data Dictionary'].iter_rows(min_row=2, values_only=True)}
+        self.assertEqual(sections, {'G'})
+        self.assertIn('Reference Ranges', wb.sheetnames)
+        lists = {r[0] for r in wb['Choices'].iter_rows(min_row=2, values_only=True)}
+        self.assertIn('bilirubin_unit', lists)
+        self.assertNotIn('marital', lists)
+        wb = load_workbook(BytesIO(self.client.get(reverse('crf:dictionary') + '?section=a').content))
+        self.assertNotIn('Reference Ranges', wb.sheetnames)
+        self.assertEqual(self.client.get(reverse('crf:dictionary') + '?section=Q').status_code, 404)
+        r = self.client.get(reverse('crf:dictionary') + '?section=G')
+        self.assertIn('_Section_G.xlsx', r['Content-Disposition'])
 
     def test_query_cycle(self):
         dm = make_user('data_manager')
