@@ -156,6 +156,8 @@ def consistency_issues(values):
     today = timezone.localdate()
     interview, admission = v.get('interview_date'), v.get('admission_date')
     sample, discharge, death = v.get('lab_sample_date'), v.get('discharge_date'), v.get('death_date')
+    result = v.get('lab_result_date')
+    imaging = v.get('imaging_date')  # cleared on save when no imaging modality is ticked
     if v.get('outcome') != 1:
         discharge = None
     if v.get('outcome') != 2:
@@ -164,6 +166,8 @@ def consistency_issues(values):
     for field, section, label, value in (('interview_date', 'Header', 'Date of interview', interview),
                                          ('admission_date', 'Header', 'Admission date', admission),
                                          ('lab_sample_date', 'G', 'Laboratory sample date', sample),
+                                         ('lab_result_date', 'G', 'Laboratory result date', result),
+                                         ('imaging_date', 'G', 'Imaging date', imaging),
                                          ('discharge_date', 'L', 'Date of discharge', discharge),
                                          ('death_date', 'L', 'Date of death', death)):
         if value and value < floor:
@@ -191,6 +195,21 @@ def consistency_issues(values):
         add(ERROR, 'G', 'lab_sample_date', 'Laboratory sample is after the date of death.', 'lab_after_death')
     if sample and discharge and sample > discharge:
         add(WARNING, 'G', 'lab_sample_date', 'Laboratory sample is after the date of discharge.', 'lab_after_discharge')
+    if result and result > today:
+        add(ERROR, 'G', 'lab_result_date', 'Laboratory result date is in the future.', 'result_future')
+    if result and sample and result < sample:
+        add(ERROR, 'G', 'lab_result_date', 'Laboratory result date is before the sample date.', 'result_before_sample')
+    elif result and sample and (result - sample).days > 30:
+        add(WARNING, 'G', 'lab_result_date',
+            f'Results reported {(result - sample).days} days after the sample: check both dates.', 'result_late')
+    if imaging and imaging > today:
+        add(ERROR, 'G', 'imaging_date', 'Imaging date is in the future.', 'img_future')
+    if imaging and admission and (imaging - admission).days < -30:
+        add(WARNING, 'G', 'imaging_date', 'Imaging is more than 30 days before admission.', 'img_early')
+    if imaging and death and imaging > death:
+        add(ERROR, 'G', 'imaging_date', 'Imaging is after the date of death.', 'img_after_death')
+    if imaging and discharge and imaging > discharge:
+        add(WARNING, 'G', 'imaging_date', 'Imaging is after the date of discharge.', 'img_after_discharge')
     for field, label, value in (('discharge_date', 'Date of discharge', discharge), ('death_date', 'Date of death', death)):
         if not value:
             continue

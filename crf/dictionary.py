@@ -50,8 +50,9 @@ CHANGE_LOG = [
      'entered in the MNH laboratory units: total and direct bilirubin µmol/L, albumin g/L, creatinine µmol/L, BUN '
      'mmol/L (unit columns G4a, G5a, G6a, G8a, G12a removed). Decimals as the MNH lab prints them: ALT, AST, GGT, ALP, '
      'potassium, bilirubins and AFP 2 decimals; sodium and chloride 1 decimal (were whole numbers). Equivalent units '
-     'shown: ×10⁹/L (= K/µL), mmol/L (= mEq/L), U/L (= IU/L). Decisions D03 and D38 answered. D39 answered: encephalopathy grade 0 kept, no longer flagged. Comorbidities: "Any other comorbidity? Yes/No" '
-     'added as E6, "specify" is now E6a and asked only when Yes (D42).'),
+     'shown: ×10⁹/L (= K/µL), mmol/L (= mEq/L), U/L (= IU/L). Decisions D03 and D38 answered. D39 answered: encephalopathy grade 0 kept, no longer flagged. "Any other cause? Yes/No" (D10) and "Any other '
+     'comorbidity? Yes/No" (E6) added; "specify" is now D10a / E6a, asked only when Yes (D42). New dates: laboratory '
+     'results reported (G0a) and imaging (G21a), saved even if wrong and flagged under Data quality > Dates (D43).'),
 ]
 
 # Issued versions are kept in data_dictionary/ (not in git; mounted read-only into the app on the server) and every

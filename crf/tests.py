@@ -254,6 +254,27 @@ class EntryTests(TestCase):
         missing = [f.name for f in checks.section_status('E', Participant.objects.get(pk=self.p.pk).values())['missing']]
         self.assertIn('other_comorbidity_specify', missing)  # Yes: specify becomes expected
 
+    def test_other_cause_yes_no(self):
+        self.client.post(self.section_url('D'), {'other_cause': '0', 'other_cause_specify': 'Schistosomiasis'})
+        self.assertEqual(SECTION_MODELS['D'].objects.get().other_cause_specify, '')
+        self.client.post(self.section_url('D'), {'other_cause': '1'})
+        missing = [f.name for f in checks.section_status('D', Participant.objects.get(pk=self.p.pk).values())['missing']]
+        self.assertIn('other_cause_specify', missing)
+
+    def test_result_and_imaging_dates_saved_and_flagged(self):
+        today = timezone.localdate()
+        r = self.client.post(self.section_url('G'), {
+            'lab_sample_date': today, 'lab_result_date': today - datetime.timedelta(days=2),
+            'img_modality_us': 'on', 'imaging_date': today + datetime.timedelta(days=3)}, follow=True)
+        g = SECTION_MODELS['G'].objects.get()
+        self.assertEqual(g.imaging_date, today + datetime.timedelta(days=3))  # saved, not refused
+        self.assertContains(r, 'Saved, but check the dates')
+        rules = {i.rule for i in checks.all_issues(Participant.objects.get(pk=self.p.pk).values())}
+        self.assertTrue({'result_before_sample', 'img_future'} <= rules)
+        # No imaging modality: the imaging date is not asked and is cleared
+        self.client.post(self.section_url('G'), {'nd__img_modality': 'on', 'imaging_date': today})
+        self.assertIsNone(SECTION_MODELS['G'].objects.get().imaging_date)
+
     def test_skip_rules_clear_hidden_answers(self):
         self.client.post(self.section_url('F'), {'hepatic_enceph': '1', 'he_grade': '3'})
         d = SECTION_MODELS['F'].objects.get()
