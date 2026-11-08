@@ -1,0 +1,46 @@
+# DCLD Study data management system (Django + MySQL).
+#
+# On the Hostinger server (/opt/cld-study), like ncd_penplus: the web container listens only on
+# 127.0.0.1:WEB_PORT (default 8092; penplus uses 8090, dimension 8091) and the host nginx forwards the domain to it
+# (docker/nginx-cld.conf); certbot adds HTTPS.
+# On a laptop the same file works: open http://127.0.0.1:8092 (set DJANGO_DEBUG=true in .env).
+# Service names start with "cld-" so they are easy to tell apart in `docker ps`.
+
+services:
+  cld-db:
+    image: mysql:8.4
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -u root --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: always
+
+  cld-web:
+    build: .
+    image: cld-study:latest
+    env_file: .env
+    environment:
+      DB_ENGINE: mysql
+      DB_HOST: cld-db
+      DB_PORT: "3306"
+    volumes:
+      - sent_emails:/app/sent_emails
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8092}:8000"
+    depends_on:
+      cld-db:
+        condition: service_healthy
+    restart: always
+
+volumes:
+  mysql_data:
+  sent_emails:

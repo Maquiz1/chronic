@@ -1,0 +1,12 @@
+.git
+.env
+.venv
+venv
+__pycache__
+*.pyc
+db.sqlite3
+staticfiles
+sent_emails
+backups
+documentations
+data_dictionary

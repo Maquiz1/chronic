@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}My profile{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card"><div class="card-body">
+      <h1 class="h4">My profile</h1>
+      <dl class="row small mb-3">
+        <dt class="col-4">Email</dt><dd class="col-8">{{ user.email }}</dd>
+        <dt class="col-4">Role</dt><dd class="col-8">{{ user.get_role_display|default:"No role yet (waiting for approval)" }}</dd>
+        <dt class="col-4">Status</dt><dd class="col-8">{{ user.status_label }}</dd>
+      </dl>
+      <form method="post">{% csrf_token %}{% include '_form.html' %}<button class="btn btn-primary">Save</button></form>
+    </div></div>
+  </div>
+  <div class="col-lg-4">
+    <div class="card"><div class="card-body">
+      <h2 class="h5">Password</h2>
+      <p class="small text-muted">Change your password here. If you forgot it, use "Forgot password" on the login page.</p>
+      <a class="btn btn-outline-primary" href="{% url 'accounts:password_change' %}">Change password</a>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

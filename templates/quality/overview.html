@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}Data quality{% endblock %}
+{% block content %}
+<h1 class="h4">Data quality</h1>
+{% include 'quality/_nav.html' with active='overview' %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <p class="text-muted small mb-0">Completeness counts only the questions that apply (skip rules followed). "Not done" items count as complete.</p>
+  <div class="btn-group btn-group-sm">
+    <a class="btn btn-outline-secondary {% if show == 'incomplete' %}active{% endif %}" href="?show=incomplete">Needing attention</a>
+    <a class="btn btn-outline-secondary {% if show == 'all' %}active{% endif %}" href="?show=all">All</a>
+  </div>
+</div>
+<div class="card"><div class="table-responsive">
+<table class="table table-sm table-hover mb-0">
+  <thead><tr><th>Study ID</th>{% for code in entry_codes %}<th class="text-center">{{ code }}</th>{% endfor %}<th class="text-end">Overall</th><th class="text-end">Errors</th><th class="text-end">Warnings</th><th class="text-end">Open queries</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td><a href="{% url 'crf:detail' r.p.pk %}">{{ r.p.study_id }}</a>{% if r.p.locked %} 🔒{% endif %}</td>
+    {% for s in r.sections %}<td class="text-center small {% if s.state == 'complete' %}table-success{% elif s.state == 'incomplete' %}table-warning{% else %}text-muted{% endif %}" title="{{ s.title }}{% if s.missing %}: missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}">{% if s.state == 'not_started' %}–{% else %}{{ s.pct }}%{% endif %}</td>{% endfor %}
+    <td class="text-end fw-semibold">{{ r.status.pct }}%</td>
+    <td class="text-end">{% if r.errors %}<span class="badge text-bg-danger">{{ r.errors }}</span>{% else %}0{% endif %}</td>
+    <td class="text-end">{% if r.warnings %}<span class="badge text-bg-warning">{{ r.warnings }}</span>{% else %}0{% endif %}</td>
+    <td class="text-end">{{ r.queries }}</td>
+  </tr>
+  {% empty %}<tr><td colspan="20" class="text-muted p-3">Nothing needs attention.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></div>
+{% endblock %}

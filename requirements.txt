@@ -1,0 +1,12 @@
+Django==5.2.18
+asgiref==3.12.1
+sqlparse==0.6.0
+# MySQL driver (needs default-libmysqlclient-dev and pkg-config to build; the Dockerfile installs them)
+mysqlclient==2.2.7
+# Audit trail: who changed which value and when
+django-simple-history==3.8.0
+# Production web server and static files
+gunicorn==23.0.0
+whitenoise==6.9.0
+# Excel exports and the data dictionary
+openpyxl==3.1.5

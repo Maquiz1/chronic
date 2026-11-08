@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}{% if object %}{{ object }}{% else %}New participant{% endif %}{% endblock %}
+{% block content %}
+<div class="row"><div class="col-md-8 col-lg-6">
+<div class="card"><div class="card-body">
+  <h1 class="h4">{% if object %}{{ object }}: questionnaire header{% else %}Register a new participant{% endif %}</h1>
+  {% if not object %}<p class="text-muted small">The Study ID is generated when you save. Write it on the paper questionnaire. You then go to Section A.</p>{% endif %}
+  <form method="post" novalidate>{% csrf_token %}{% include '_form.html' %}
+    <button class="btn btn-primary">{% if object %}Save{% else %}Register and start Section A{% endif %}</button>
+    <a class="btn btn-link" href="{% if object %}{% url 'crf:detail' object.pk %}{% else %}{% url 'crf:list' %}{% endif %}">Cancel</a>
+  </form>
+</div></div>
+</div></div>
+{% endblock %}

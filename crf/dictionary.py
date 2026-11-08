@@ -1,0 +1,228 @@
+"""Builds the Excel data dictionary from crf/spec.py and crf/decisions.py.
+
+Plain Python plus openpyxl (no Django), so it also runs from the command line:
+    python -m crf.dictionary            -> data_dictionary/DCLD_Data_Dictionary_v<VERSION>.xlsx
+"""
+from pathlib import Path
+
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.datavalidation import DataValidation
+
+try:  # works both inside Django (crf.spec) and as `python -m crf.dictionary`
+    from . import decisions as decisions_mod
+    from . import spec
+except ImportError:  # pragma: no cover
+    import decisions as decisions_mod
+    import spec
+
+HEADER_FILL = PatternFill('solid', fgColor='1F3864')
+HEADER_FONT = Font(bold=True, color='FFFFFF')
+YELLOW = PatternFill('solid', fgColor='FFF2CC')
+GREY = PatternFill('solid', fgColor='EDEDED')
+SECTION_FILL = PatternFill('solid', fgColor='D9E1F2')
+THIN = Side(style='thin', color='BFBFBF')
+BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
+WRAP = Alignment(wrap_text=True, vertical='top')
+
+# Version history: add a line for every new version.
+CHANGE_LOG = [
+    ('0.1', '2026-11-08', 'First draft from "questionnaire final.docx" and the MNH lab sheets (units1.jpeg, '
+     'units2.jpeg). Proposal not yet received.'),
+]
+
+
+def dictionary_filename():
+    return f'DCLD_Data_Dictionary_v{spec.VERSION}.xlsx'
+
+
+def _table(ws, headers, rows, widths, start_row=1, wrap_cols=()):
+    for i, h in enumerate(headers, 1):
+        c = ws.cell(start_row, i, h)
+        c.fill, c.font, c.border, c.alignment = HEADER_FILL, HEADER_FONT, BORDER, WRAP
+    for r, row in enumerate(rows, start_row + 1):
+        for i, value in enumerate(row, 1):
+            c = ws.cell(r, i, value)
+            c.border = BORDER
+            c.alignment = WRAP
+    for i, w in enumerate(widths, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+    ws.freeze_panes = ws.cell(start_row + 1, 1)
+    if rows:
+        ws.auto_filter.ref = f'A{start_row}:{get_column_letter(len(headers))}{start_row + len(rows)}'
+
+
+def _range_text(r):
+    return f'{r[0]:g}-{r[1]:g}' if r else ''
+
+
+def _dictionary_rows():
+    rows, n = [], 0
+    for f in spec.HEADER:
+        n += 1
+        rows.append([n, 'Header', 'Questionnaire header', f.name, f.qn, f.label, f.type, '', f.unit, '', '', '', '', '',
+                     'Yes' if f.name in ('study_id', 'interview_date') else 'No', '', '', f.crf_wording, f.status,
+                     f.decision, f.notes])
+    for section in spec.SECTIONS:
+        if not section.fields:
+            n += 1
+            rows.append([n, section.code, section.title, '(calculated)', '', section.note, 'calculated', '', '', '', '',
+                         '', '', '', 'No', '', '', '', 'Derived', '', 'See Derived Scores sheet.'])
+            continue
+        for f in section.fields:
+            n += 1
+            if f.by_unit:
+                hard = '; '.join(f'{c["unit"]}: {_range_text(c["hard"])}' for c in f.by_unit.values())
+                check = '; '.join(f'{c["unit"]}: {_range_text(c["check"])}' for c in f.by_unit.values())
+                ref = '; '.join(f'{c["unit"]}: {_range_text(c["ref"])}' for c in f.by_unit.values())
+                unit = f'see {f.unit_field}'
+            else:
+                hard, check, ref, unit = _range_text(f.hard), _range_text(f.check), _range_text(f.ref), f.unit
+            columns = ', '.join(f.columns) if f.type == 'select_multiple' else ''
+            notes = '; '.join(x for x in (f.notes, f'Columns: {columns}' if columns else '') if x)
+            rows.append([n, section.code, section.title, f.name, f.qn, f.label, f.type, f.choices, unit,
+                         f.dp if f.type == 'decimal' else '', hard, check, ref,
+                         'Yes' if f.allow_nd else '', 'No', 'Yes' if f.expected else 'No (optional)',
+                         spec.relevance_text(f), f.crf_wording, f.status, f.decision, notes])
+    return rows
+
+
+def build_workbook():
+    wb = Workbook()
+
+    # README -------------------------------------------------------------------------------------------------------
+    ws = wb.active
+    ws.title = 'README'
+    open_high = sum(1 for d in decisions_mod.DECISIONS if d[1] == 'High' and d[8] == 'Open')
+    lines = [
+        ('DCLD Study: Data Dictionary', None),
+        (f'Version {spec.VERSION}, DRAFT, {spec.VERSION_DATE}. {open_high} High decisions open.', None),
+        (None, None),
+        ('Study', spec.STUDY_TITLE),
+        ('Purpose', 'Lists every variable on the questionnaire with its code, label, type, codes, units, limits and '
+                    'skip rules. The data entry system, its checks and the exports are generated from the same source '
+                    '(crf/spec.py), so this workbook always matches the system.'),
+        ('Sources', f'documentations/tools/{spec.CRF_SOURCE}; documentations/si_units_range/units1.jpeg (MNH '
+                    'Gastroenterology unit lab sheet: tests and units) and units2.jpeg (MNH Jeeva clinical chemistry '
+                    'screen: units and reference limits). The study proposal was not available.'),
+        ('What to do', '1. Answer the Decisions sheet in the yellow columns, starting with the High items.\n'
+                       '2. Check the Reference Ranges sheet with the MNH laboratory (rows marked Proposed).\n'
+                       '3. Send the updated CRF and the proposal; a new version of this workbook and the system follow.'),
+        ('Saving incomplete forms', 'No CRF field is mandatory in the system. Each section is saved on its own and '
+                                    'completed later (e.g. when laboratory results arrive). Lab and imaging items can be '
+                                    'ticked "Not done / not available". The Data quality pages list what is still '
+                                    'missing for each participant, following the skip rules.'),
+        ('Limits', 'Hard limits: values outside are refused at entry. Check limits: possible but unusual, flagged '
+                   '"verify against source". Reference: normal range, shown as L/H (clinical information, not an error).'),
+        ('Codes', 'Yes = 1, No = 0, Unknown = 9; Present = 1, Absent = 0 (proposed; the CRF prints only tick boxes). '
+                  'Multiple-answer questions are stored as one 0/1 column per option.'),
+        (None, None),
+        ('Sheets', None),
+        ('Sections', 'The CRF sections and how many variables each has.'),
+        ('Data Dictionary', 'One row per question.'),
+        ('Choices', 'Code lists.'),
+        ('Derived Scores', 'Values the system calculates: BMI, unit conversions, Child-Pugh, MELD-Na, APRI, K1-K2.'),
+        ('Reference Ranges', 'Units and limits for every laboratory test, with their source.'),
+        ('Decisions', 'Problems found in the CRF, what the system does for now, and who decides.'),
+        ('Change Log', 'What changed in each version.'),
+    ]
+    for r, (a, b) in enumerate(lines, 1):
+        ws.cell(r, 1, a)
+        ws.cell(r, 2, b).alignment = WRAP
+        if a and b is not None:
+            ws.cell(r, 1).font = Font(bold=True)
+    ws['A1'].font = Font(bold=True, size=14)
+    ws['A2'].font = Font(italic=True)
+    ws.column_dimensions['A'].width = 24
+    ws.column_dimensions['B'].width = 110
+
+    # Sections ------------------------------------------------------------------------------------------------------
+    ws = wb.create_sheet('Sections')
+    rows = [['Header', 'Questionnaire header (Study ID, dates, interviewer, phone)', len(spec.HEADER), '',
+             'Entered when the participant is registered.']]
+    for s in spec.SECTIONS:
+        rows.append([s.code, s.title, f"=COUNTIF('Data Dictionary'!$B:$B,A{len(rows) + 2})",
+                     sum(1 for d in spec.DERIVED if d.section == s.code), s.note])
+    _table(ws, ['Section', 'Title', 'Variables', 'Derived values', 'Note'], rows, [10, 50, 11, 14, 70])
+
+    # Data Dictionary -----------------------------------------------------------------------------------------------
+    ws = wb.create_sheet('Data Dictionary')
+    headers = ['Row', 'Section', 'Section title', 'Variable', 'Qn', 'Label (English)', 'Type', 'Choice list', 'Unit',
+               'Decimals', 'Hard limits (refused)', 'Check limits (flagged)', 'Reference range', 'Can be "Not done"',
+               'Required to save', 'Counts for completeness', 'Relevance (skip rule)', 'CRF wording (if changed)',
+               'Status', 'Decision', 'Notes']
+    rows = _dictionary_rows()
+    _table(ws, headers, rows, [5, 8, 22, 22, 6, 45, 12, 14, 12, 8, 20, 20, 20, 9, 9, 11, 28, 26, 18, 9, 50])
+    ws.freeze_panes = 'E2'
+    for r in range(2, len(rows) + 2):
+        status = ws.cell(r, 19).value or ''
+        if status != 'Ready':
+            ws.cell(r, 19).fill = YELLOW
+
+    # Choices -------------------------------------------------------------------------------------------------------
+    ws = wb.create_sheet('Choices')
+    rows = [[name, code, label, 'Code proposed' if isinstance(code, int) else 'Column suffix']
+            for name, items in spec.CHOICES.items() for code, label in items]
+    _table(ws, ['List', 'Code', 'Label (English)', 'Status'], rows, [18, 22, 40, 16])
+
+    # Derived -------------------------------------------------------------------------------------------------------
+    ws = wb.create_sheet('Derived Scores')
+    rows = [[d.name, d.section, d.label, d.calculation, d.unit, d.range, d.interpretation, d.source, d.status,
+             d.decision] for d in spec.DERIVED]
+    _table(ws, ['Variable', 'Section', 'Description', 'Calculation', 'Unit', 'Range', 'Interpretation', 'Source',
+                'Status', 'Decision'], rows, [18, 8, 32, 60, 9, 9, 34, 26, 24, 9])
+
+    # Reference ranges ----------------------------------------------------------------------------------------------
+    ws = wb.create_sheet('Reference Ranges')
+    rows = []
+    for section, f in spec.all_fields():
+        if f.type not in ('integer', 'decimal') or section.code != 'G':
+            continue
+        source = 'MNH Jeeva (units2.jpeg)' if 'Jeeva' in f.notes else 'Proposed - confirm with MNH lab'
+        configs = f.by_unit.values() if f.by_unit else [{'unit': f.unit, 'hard': f.hard, 'check': f.check, 'ref': f.ref}]
+        for cfg in configs:
+            src = source
+            if f.name == 'creatinine' and cfg['unit'] == 'mg/dL':
+                src = 'MNH Jeeva µmol/L range ÷ 88.4'
+            elif f.name == 'creatinine':
+                src = 'MNH Jeeva (units2.jpeg)'
+            rows.append([f.qn, f.label, cfg['unit'], cfg['ref'][0] if cfg['ref'] else '', cfg['ref'][1] if cfg['ref'] else '',
+                         _range_text(cfg['check']), _range_text(cfg['hard']), src])
+    _table(ws, ['Qn', 'Test', 'Unit', 'Lower limit', 'Upper limit', 'Check limits', 'Hard limits', 'Source'], rows,
+           [6, 26, 12, 12, 12, 14, 14, 36])
+
+    # Decisions -----------------------------------------------------------------------------------------------------
+    ws = wb.create_sheet('Decisions')
+    ws.cell(1, 1, 'Answer in the yellow columns and change Status to Answered. Row 3 is an example only. '
+                  'IDs stay the same between versions, so some numbers are not used.').font = Font(italic=True)
+    rows = [list(d[:7]) + [d[7], '', d[8]] for d in decisions_mod.DECISIONS]
+    _table(ws, ['ID', 'Priority', 'Area', 'CRF item', 'Problem found', 'What the system does now / proposal',
+                'Who decides', 'Answer', 'Answered by', 'Status'], rows, [6, 9, 18, 14, 70, 60, 16, 40, 18, 11],
+           start_row=2)
+    for r in range(3, len(rows) + 3):
+        for col in (8, 9, 10):
+            ws.cell(r, col).fill = YELLOW
+        if ws.cell(r, 2).value == 'Example':
+            for col in range(1, 11):
+                ws.cell(r, col).fill = GREY
+    dv = DataValidation(type='list', formula1='"Open,Answered,Example"', allow_blank=True)
+    ws.add_data_validation(dv)
+    dv.add(f'J3:J{len(rows) + 2}')
+
+    # Change log ----------------------------------------------------------------------------------------------------
+    ws = wb.create_sheet('Change Log')
+    _table(ws, ['Version', 'Date', 'Changes'], [list(x) for x in CHANGE_LOG], [10, 12, 110])
+    return wb
+
+
+def write(directory=None):
+    directory = Path(directory or Path(__file__).resolve().parent.parent / 'data_dictionary')
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / dictionary_filename()
+    build_workbook().save(path)
+    return path
+
+
+if __name__ == '__main__':  # pragma: no cover
+    print(write())

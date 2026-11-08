@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+  <h1 class="h4 mb-0">Users</h1>
+  <form class="d-flex gap-2" method="get">
+    <input class="form-control form-control-sm" name="q" value="{{ request.GET.q }}" placeholder="Name or email">
+    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+      <option value="">All</option>
+      <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>Waiting for approval ({{ pending_count }})</option>
+      <option value="unconfirmed" {% if request.GET.status == 'unconfirmed' %}selected{% endif %}>Email not confirmed</option>
+    </select>
+    <button class="btn btn-sm btn-outline-secondary">Search</button>
+  </form>
+</div>
+{% if pending_count %}<div class="alert alert-warning py-2">{{ pending_count }} account(s) waiting for a role. <a href="?status=pending">Show them</a>.</div>{% endif %}
+<div class="card"><div class="table-responsive">
+<table class="table table-sm table-hover mb-0">
+  <thead><tr><th>Name</th><th>Email</th><th>Institution / position</th><th>Role</th><th>Status</th><th>Registered</th><th></th></tr></thead>
+  <tbody>
+  {% for u in object_list %}
+  <tr>
+    <td>{{ u.get_full_name|default:"—" }}</td><td>{{ u.email }}</td>
+    <td class="small">{{ u.institution }}{% if u.position %} · {{ u.position }}{% endif %}</td>
+    <td>{{ u.get_role_display|default:"—" }}{% if u.is_superuser %} <span class="badge text-bg-dark">superuser</span>{% endif %}</td>
+    <td><span class="badge text-bg-{% if u.status_label == 'Active' %}success{% elif u.status_label == 'Waiting for approval' %}warning{% else %}secondary{% endif %}">{{ u.status_label }}</span></td>
+    <td class="small">{{ u.date_joined|date:"d M Y" }}</td>
+    <td class="text-end text-nowrap">
+      {% if u.pk in manageable %}
+        {% if not u.email_verified %}
+        <form method="post" action="{% url 'accounts:user_resend' u.pk %}" class="d-inline">{% csrf_token %}<button class="btn btn-sm btn-link">Resend link</button></form>
+        {% endif %}
+        <a class="btn btn-sm btn-outline-primary" href="{% url 'accounts:user_edit' u.pk %}">{% if u.status_label == 'Waiting for approval' %}Approve{% else %}Edit{% endif %}</a>
+      {% endif %}
+    </td>
+  </tr>
+  {% empty %}<tr><td colspan="7" class="text-muted p-3">No accounts found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></div>
+{% include '_pagination.html' %}
+{% endblock %}

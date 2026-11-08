@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}{{ object }}{% endblock %}
+{% block content %}
+<div class="row"><div class="col-md-8 col-lg-6">
+<div class="card"><div class="card-body">
+  <h1 class="h4">{{ object }}</h1>
+  <p class="small text-muted">{{ object.email }} · registered {{ object.date_joined|date:"d M Y" }} · {{ object.status_label }}
+    {% if object.approved_by %}<br>Approved by {{ object.approved_by }} on {{ object.approved_at|date:"d M Y" }}{% endif %}</p>
+  <form method="post">{% csrf_token %}{% include '_form.html' %}
+    <button class="btn btn-primary">Save</button>
+    <a class="btn btn-link" href="{% url 'accounts:users' %}">Cancel</a>
+  </form>
+  <p class="small text-muted mt-3 mb-0">Giving a role to an account without one sends the person an approval email. <a href="{% url 'accounts:roles' %}">What each role can do</a>.</p>
+</div></div>
+</div></div>
+{% endblock %}

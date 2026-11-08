@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load crf_tags %}
+{% block title %}{{ participant }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <h1 class="h3 mb-0">{{ participant.study_id }}
+      {% if participant.locked %}<span class="badge text-bg-dark fs-6 align-middle">Verified &amp; locked</span>{% endif %}</h1>
+    <div class="text-muted small">Interview {{ participant.interview_date|date:"d M Y" }} · admitted {{ participant.admission_date|date:"d M Y"|default:"(date missing)" }}
+      · by {{ participant.interviewer }}{% if can.view_identity and participant.phone_number %} · phone {{ participant.phone_number }}{% endif %}
+      {% if participant.locked %}<br>Locked by {{ participant.locked_by }} on {{ participant.locked_at|date:"d M Y H:i" }}{% endif %}</div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    {% if can.enter_data and not participant.locked %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'crf:edit' participant.pk %}">Edit header</a>{% endif %}
+    {% if can.view_audit %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'crf:history' participant.pk %}">Change history</a>{% endif %}
+    {% if can.lock_record %}
+      <form method="post" action="{% url 'crf:lock' participant.pk %}">{% csrf_token %}
+        {% if participant.locked %}<button class="btn btn-sm btn-outline-warning" name="unlock" value="1">Unlock for corrections</button>
+        {% else %}<button class="btn btn-sm btn-success" {% if not status.complete %}onclick="return confirm('This record is not complete. Lock it anyway?')"{% endif %}>Verify &amp; lock</button>{% endif %}
+      </form>
+    {% endif %}
+    {% if can.delete_record %}<a class="btn btn-sm btn-outline-danger" href="{% url 'crf:delete' participant.pk %}">Delete</a>{% endif %}
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-xl-7">
+    <div class="card"><div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h5 mb-0">CRF sections</h2>
+        <span class="badge text-bg-{{ status.pct|pct_class }} fs-6">{{ status.pct }}% complete</span>
+      </div>
+      <table class="table table-sm mb-0">
+        <thead><tr><th></th><th>Section</th><th>Status</th><th>Answered</th><th>Still missing</th><th></th></tr></thead>
+        <tbody>
+        {% for s in status.sections %}
+          <tr>
+            <td class="fw-semibold">{{ s.code }}</td>
+            <td>{{ s.title }}</td>
+            <td>{% state_badge s.state %}</td>
+            <td class="small">{% if s.state != 'calculated' %}{{ s.answered }}/{{ s.expected }}{% if s.not_done %} <span class="text-muted">(+{{ s.not_done }} not done)</span>{% endif %}{% endif %}</td>
+            <td class="small text-muted">{% for f in s.missing|slice:":4" %}{{ f.qn }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if s.missing|length > 4 %} +{{ s.missing|length|add:"-4" }} more{% endif %}</td>
+            <td class="text-end">{% if s.state != 'calculated' and can.enter_data and not participant.locked %}<a class="btn btn-sm btn-outline-primary py-0" href="{% url 'crf:section' participant.pk s.code %}">{% if s.state == 'not_started' %}Enter{% else %}Update{% endif %}</a>{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div></div>
+
+    <div class="card mt-3"><div class="card-body">
+      <h2 class="h5">Laboratory results (Section G)</h2>
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Test</th><th class="text-end">Result</th><th>Unit</th><th>Reference</th><th></th></tr></thead>
+        <tbody>
+        {% for lab in labs %}
+          <tr>
+            <td>{{ lab.f.qn }} {{ lab.f.label }}</td>
+            <td class="text-end">{% if lab.nd %}<span class="text-muted">not done</span>{% elif lab.value is None %}<span class="text-warning">pending</span>{% else %}{{ lab.value|show }}{% endif %}</td>
+            <td class="small">{{ lab.unit }}</td><td class="small text-muted">{{ lab.ref|range_text }}</td>
+            <td class="flag-{{ lab.flag }}">{{ lab.flag }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div></div>
+  </div>
+
+  <div class="col-xl-5">
+    <div class="card"><div class="card-body">
+      <h2 class="h5">Calculated scores</h2>
+      <dl class="row mb-0">
+        <dt class="col-7">BMI</dt><dd class="col-5">{{ scores.bmi|default:"—" }}</dd>
+        <dt class="col-7">Child-Pugh score (class)</dt><dd class="col-5">{{ scores.cp_score|default:"—" }}{% if scores.cp_class %} ({{ scores.cp_class }}){% endif %}</dd>
+        <dd class="col-12 small text-muted mb-2">Points: bilirubin {{ scores.cp_bili_pts|default:"?" }}, albumin {{ scores.cp_alb_pts|default:"?" }}, INR {{ scores.cp_inr_pts|default:"?" }}, ascites {{ scores.cp_ascites_pts|default:"?" }}, encephalopathy {{ scores.cp_enceph_pts|default:"?" }}</dd>
+        <dt class="col-7">MELD / MELD-Na</dt><dd class="col-5">{{ scores.meld|default:"—" }} / {{ scores.meld_na|default:"—" }}</dd>
+        <dt class="col-7">APRI</dt><dd class="col-5">{{ scores.apri|default:"—" }}</dd>
+        <dt class="col-7">K1 Child-Pugh C · K2 MELD-Na ≥ 15</dt><dd class="col-5">{{ scores.k_child_c|show }} · {{ scores.k_meld15|show }}</dd>
+        <dt class="col-7">Length of stay from dates</dt><dd class="col-5">{{ scores.los_from_dates|default:"—" }}</dd>
+      </dl>
+      <p class="small text-muted mb-0 mt-2">Blank when an input is missing or still pending.</p>
+    </div></div>
+
+    <div class="card mt-3"><div class="card-body">
+      <h2 class="h5">Automatic checks <span class="badge text-bg-secondary">{{ issues|length }}</span></h2>
+      {% for issue in issues %}
+        <div class="d-flex justify-content-between gap-2 border-bottom py-1 small">
+          <div><span class="badge text-bg-{% if issue.level == 'error' %}danger{% else %}warning{% endif %}">{{ issue.section }}</span>
+            <strong>{{ issue.label }}</strong>: {{ issue.message }}</div>
+          {% if can.raise_query %}
+          <form method="post" action="{% url 'quality:query_create' participant.pk %}">{% csrf_token %}
+            <input type="hidden" name="section" value="{{ issue.section }}"><input type="hidden" name="field" value="{{ issue.field }}">
+            <input type="hidden" name="message" value="{{ issue.message }}"><input type="hidden" name="rule" value="{{ issue.rule }}">
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button class="btn btn-sm btn-link p-0 text-nowrap">Raise query</button>
+          </form>
+          {% endif %}
+        </div>
+      {% empty %}<p class="text-muted small mb-0">No problems found.</p>{% endfor %}
+    </div></div>
+
+    <div class="card mt-3"><div class="card-body">
+      <h2 class="h5">Queries</h2>
+      {% for q in queries %}{% include 'quality/_query.html' with q=q %}{% empty %}<p class="text-muted small">No queries.</p>{% endfor %}
+      {% if can.raise_query %}
+      <details class="mt-2"><summary class="small">Raise a query</summary>
+        <form method="post" action="{% url 'quality:query_create' participant.pk %}" class="mt-2">{% csrf_token %}
+          <input type="hidden" name="next" value="{{ request.path }}">
+          {% include '_form.html' with form=query_form %}
+          <button class="btn btn-sm btn-primary">Raise query</button>
+        </form>
+      </details>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+{% endblock %}

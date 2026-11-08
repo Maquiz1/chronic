@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block title %}Exports{% endblock %}
+{% block content %}
+<h1 class="h4">Exports</h1>
+<div class="row g-3">
+  <div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-body">
+    <h2 class="h6">Study data (de-identified)</h2>
+    <p class="small text-muted">Excel, one row per participant: every CRF variable (coded as in the data dictionary), calculated scores, completeness and check counts. No phone numbers.</p>
+    <a class="btn btn-primary" href="{% url 'crf:export' %}">Download .xlsx</a>
+  </div></div></div>
+  {% if can.export_identifiable %}
+  <div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-body">
+    <h2 class="h6">Study data with phone numbers</h2>
+    <p class="small text-muted">Same file plus phone numbers. Store it securely and delete it when no longer needed.</p>
+    <a class="btn btn-outline-danger" href="{% url 'crf:export' %}?identifiable=1">Download .xlsx</a>
+  </div></div></div>
+  {% endif %}
+  <div class="col-md-6 col-xl-4"><div class="card h-100"><div class="card-body">
+    <h2 class="h6">Data dictionary</h2>
+    <p class="small text-muted">Variables, codes, units, limits, skip rules, calculated scores and open decisions. Built from the same source as this system, so it always matches.</p>
+    <a class="btn btn-outline-primary" href="{% url 'crf:dictionary' %}">Download .xlsx</a>
+  </div></div></div>
+</div>
+{% endblock %}

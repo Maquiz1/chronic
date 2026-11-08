@@ -1,0 +1,6 @@
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item"><a class="nav-link {% if active == 'overview' %}active{% endif %}" href="{% url 'quality:overview' %}">Completeness</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'pending' %}active{% endif %}" href="{% url 'quality:pending' %}">Pending results</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'issues' %}active{% endif %}" href="{% url 'quality:issues' %}">Automatic checks</a></li>
+  <li class="nav-item"><a class="nav-link {% if active == 'queries' %}active{% endif %}" href="{% url 'quality:queries' %}">Queries</a></li>
+</ul>

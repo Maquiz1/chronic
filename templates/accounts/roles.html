@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+{% block title %}Roles{% endblock %}
+{% block content %}
+<h1 class="h4">Roles</h1>
+<p class="text-muted">People register with their email; an Admin (or a Data Manager, for Data Clerks and Investigators) then gives them one of these roles.</p>
+<div class="card"><div class="table-responsive">
+<table class="table table-sm mb-0">
+  <thead><tr><th>What they can do</th>{% for code, label in roles %}<th class="text-center">{{ label }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for label, cells in rows %}<tr><td>{{ label }}</td>{% for ok in cells %}<td class="text-center">{% if ok %}<span class="text-success">✔</span>{% else %}<span class="text-muted">–</span>{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody>
+</table>
+</div></div>
+{% endblock %}

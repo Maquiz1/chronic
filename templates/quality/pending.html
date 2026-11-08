@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}Pending results{% endblock %}
+{% block content %}
+<h1 class="h4">Data quality</h1>
+{% include 'quality/_nav.html' with active='pending' %}
+<form class="d-flex gap-2 align-items-center mb-3" method="get">
+  <label class="small text-muted">Section</label>
+  <select name="section" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+    <option value="" {% if not section_filter %}selected{% endif %}>All sections</option>
+    {% for s in sections %}<option value="{{ s.code }}" {% if s.code == section_filter %}selected{% endif %}>{{ s.code }}: {{ s.title }}</option>{% endfor %}
+  </select>
+  <span class="small text-muted">Unlocked records only. Grey IDs: section not started yet.</span>
+</form>
+{% for g in groups %}
+<div class="card mb-2"><div class="card-body py-2">
+  <div class="d-flex justify-content-between"><strong>{{ g.section.code }} · {{ g.f.qn }} {{ g.f.label }}</strong><span class="badge text-bg-warning">{{ g.participants|length }}</span></div>
+  <div class="mt-1">{% for p, not_started in g.participants %}<a class="badge {% if not_started %}text-bg-light{% else %}text-bg-secondary{% endif %} text-decoration-none me-1" href="{% if can.enter_data %}{% url 'crf:section' p.pk g.section.code %}{% else %}{% url 'crf:detail' p.pk %}{% endif %}">{{ p.study_id }}</a>{% endfor %}</div>
+</div></div>
+{% empty %}<p class="text-muted">Nothing pending in this section.</p>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load crf_tags %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h4 mb-0">Dashboard</h1>
+  {% if can.enter_data %}<a class="btn btn-primary" href="{% url 'crf:create' %}">+ New participant</a>{% endif %}
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg"><div class="card"><div class="card-body"><div class="text-muted small">Participants</div><div class="stat">{{ total }}</div><div class="small text-muted">{{ this_week }} in the last 7 days</div></div></div></div>
+  <div class="col-6 col-lg"><div class="card"><div class="card-body"><div class="text-muted small">Complete records</div><div class="stat">{{ complete }}</div><div class="small text-muted">{{ locked }} verified &amp; locked</div></div></div></div>
+  <div class="col-6 col-lg"><div class="card"><div class="card-body"><div class="text-muted small">Average completeness</div><div class="stat">{{ avg_pct }}%</div></div></div></div>
+  <div class="col-6 col-lg"><div class="card"><div class="card-body"><div class="text-muted small">Queries</div><div class="stat">{{ open_queries }}</div><div class="small text-muted">open · {{ answered_queries }} answered, to close</div></div></div></div>
+</div>
+<div class="row g-3">
+  <div class="col-lg-5"><div class="card"><div class="card-body">
+    <h2 class="h6">By section</h2>
+    <table class="table table-sm mb-0"><thead><tr><th></th><th>Section</th><th class="text-end">Complete</th><th class="text-end">Missing items</th></tr></thead><tbody>
+    {% for s in per_section %}<tr><td class="fw-semibold">{{ s.code }}</td><td>{{ s.title }}</td><td class="text-end">{{ s.complete }}/{{ total }}</td>
+      <td class="text-end">{% if s.missing and can.view_quality %}<a href="{% url 'quality:pending' %}?section={{ s.code }}">{{ s.missing }}</a>{% else %}{{ s.missing }}{% endif %}</td></tr>{% endfor %}
+    </tbody></table>
+  </div></div></div>
+  <div class="col-lg-7"><div class="card"><div class="card-body">
+    <h2 class="h6">Recently registered</h2>
+    <table class="table table-sm table-hover mb-0"><thead><tr><th>Study ID</th><th>Interview</th><th>Sections</th><th class="text-end">Complete</th></tr></thead><tbody>
+    {% for p, st in recent %}<tr><td><a href="{% url 'crf:detail' p.pk %}">{{ p.study_id }}</a>{% if p.locked %} 🔒{% endif %}</td><td>{{ p.interview_date|date:"d M Y" }}</td>
+      <td>{% for s in st.sections %}{% if s.state != 'calculated' %}<span class="sec-chip {{ s.state }}" title="{{ s.title }}: {{ s.state }}">{{ s.code }}</span>{% endif %}{% endfor %}</td>
+      <td class="text-end">{{ st.pct }}%</td></tr>
+    {% empty %}<tr><td colspan="4" class="text-muted">No participants yet.</td></tr>{% endfor %}
+    </tbody></table>
+  </div></div></div>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Automatic checks{% endblock %}
+{% block content %}
+<h1 class="h4">Data quality</h1>
+{% include 'quality/_nav.html' with active='issues' %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+  <p class="text-muted small mb-0">Errors: impossible or contradictory values. Warnings: unusual values or answers that differ between sections. Verify against the source document.</p>
+  <div class="btn-group btn-group-sm">
+    <a class="btn btn-outline-secondary {% if not level %}active{% endif %}" href="?">All</a>
+    <a class="btn btn-outline-secondary {% if level == 'error' %}active{% endif %}" href="?level=error">Errors</a>
+    <a class="btn btn-outline-secondary {% if level == 'warning' %}active{% endif %}" href="?level=warning">Warnings</a>
+  </div>
+</div>
+<div class="card"><div class="table-responsive">
+<table class="table table-sm mb-0">
+  <thead><tr><th>Study ID</th><th></th><th>Section</th><th>Item</th><th>Problem</th><th></th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr>
+    <td><a href="{% url 'crf:detail' r.p.pk %}">{{ r.p.study_id }}</a></td>
+    <td><span class="badge text-bg-{% if r.issue.level == 'error' %}danger{% else %}warning{% endif %}">{{ r.issue.level }}</span></td>
+    <td>{{ r.issue.section }}</td><td class="small">{{ r.issue.label }}</td><td class="small">{{ r.issue.message }}</td>
+    <td class="text-end text-nowrap">
+      {% if r.queried %}<span class="small text-muted">query open</span>
+      {% elif can.raise_query %}
+      <form method="post" action="{% url 'quality:query_create' r.p.pk %}">{% csrf_token %}
+        <input type="hidden" name="section" value="{{ r.issue.section }}"><input type="hidden" name="field" value="{{ r.issue.field }}">
+        <input type="hidden" name="message" value="{{ r.issue.message }}"><input type="hidden" name="rule" value="{{ r.issue.rule }}">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <button class="btn btn-sm btn-outline-primary py-0">Raise query</button>
+      </form>{% endif %}
+    </td>
+  </tr>
+  {% empty %}<tr><td colspan="6" class="text-muted p-3">No problems found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></div>
+{% endblock %}

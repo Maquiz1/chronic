@@ -1,0 +1,28 @@
+<div class="border rounded p-2 mb-2 small {% if q.status == 'open' %}border-danger{% elif q.status == 'answered' %}border-warning{% endif %}">
+  <div class="d-flex justify-content-between">
+    <div><span class="badge text-bg-{% if q.status == 'open' %}danger{% elif q.status == 'answered' %}warning{% else %}secondary{% endif %}">{{ q.get_status_display }}</span>
+      {% if show_participant %}<a href="{% url 'crf:detail' q.participant_id %}" class="fw-semibold">{{ q.participant }}</a> ·{% endif %}
+      Section {{ q.section }}{% if q.field %} · {{ q.field_label }}{% endif %}</div>
+    <div class="text-muted">{{ q.raised_by }} · {{ q.raised_at|date:"d M Y" }}</div>
+  </div>
+  <div class="mt-1">{{ q.message }}</div>
+  {% if q.response %}<div class="mt-1 ps-2 border-start"><em>Answer</em> ({{ q.answered_by }}, {{ q.answered_at|date:"d M Y" }}): {{ q.response }}</div>{% endif %}
+  {% if q.status == 'closed' %}<div class="text-muted mt-1">Closed by {{ q.closed_by }} on {{ q.closed_at|date:"d M Y" }}</div>{% endif %}
+  <div class="d-flex flex-wrap gap-2 mt-2">
+    {% if q.status != 'closed' and can.answer_query %}
+      <form method="post" action="{% url 'quality:query_answer' q.pk %}" class="d-flex gap-2 flex-grow-1">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <input name="response" class="form-control form-control-sm" placeholder="What was checked or corrected" required>
+        <button class="btn btn-sm btn-outline-primary text-nowrap">Answer</button>
+      </form>
+    {% endif %}
+    {% if can.raise_query %}
+      <form method="post" action="{% url 'quality:query_close' q.pk %}">{% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        {% if q.status == 'closed' %}<button class="btn btn-sm btn-link" name="reopen" value="1">Reopen</button>
+        {% else %}<button class="btn btn-sm btn-outline-success">Close</button>{% endif %}
+      </form>
+    {% endif %}
+    {% if q.status != 'closed' and can.enter_data and q.section != 'Header' and q.section != 'J' %}<a class="btn btn-sm btn-link" href="{% url 'crf:section' q.participant_id q.section %}">Open section {{ q.section }}</a>{% endif %}
+  </div>
+</div>

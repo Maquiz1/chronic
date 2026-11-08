@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load crf_tags %}
+{% block title %}Participants{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h4 mb-0">Participants</h1>
+  <form class="d-flex flex-wrap gap-2" method="get">
+    <input class="form-control form-control-sm" style="width:14rem" name="q" value="{{ request.GET.q }}" placeholder="Study ID{% if can.view_identity %} or phone{% endif %}">
+    <select name="status" class="form-select form-select-sm" style="width:auto">
+      <option value="">All records</option>
+      <option value="incomplete" {% if request.GET.status == 'incomplete' %}selected{% endif %}>Incomplete</option>
+      <option value="complete" {% if request.GET.status == 'complete' %}selected{% endif %}>Complete</option>
+    </select>
+    <button class="btn btn-sm btn-outline-secondary">Filter</button>
+    {% if can.enter_data %}<a class="btn btn-sm btn-primary" href="{% url 'crf:create' %}">+ New participant</a>{% endif %}
+  </form>
+</div>
+<div class="card"><div class="table-responsive">
+<table class="table table-sm table-hover mb-0">
+  <thead><tr><th>Study ID</th><th>Interview</th><th>Interviewer</th><th>Sections <span class="text-muted small">(green complete, yellow incomplete, grey not started)</span></th><th class="text-end">Complete</th><th class="text-end">Missing</th></tr></thead>
+  <tbody>
+  {% for p, st in rows %}
+  <tr>
+    <td><a href="{% url 'crf:detail' p.pk %}" class="fw-semibold">{{ p.study_id }}</a>{% if p.locked %} <span title="Verified and locked">🔒</span>{% endif %}</td>
+    <td>{{ p.interview_date|date:"d M Y" }}</td><td class="small">{{ p.interviewer }}</td>
+    <td>{% for s in st.sections %}{% if s.state != 'calculated' %}{% if can.enter_data and not p.locked %}<a class="sec-chip {{ s.state }}" href="{% url 'crf:section' p.pk s.code %}" title="{{ s.title }}: {{ s.answered }}/{{ s.expected }}">{{ s.code }}</a>{% else %}<span class="sec-chip {{ s.state }}" title="{{ s.title }}">{{ s.code }}</span>{% endif %}{% endif %}{% endfor %}</td>
+    <td class="text-end"><span class="badge text-bg-{{ st.pct|pct_class }}">{{ st.pct }}%</span></td>
+    <td class="text-end">{{ st.missing_count }}</td>
+  </tr>
+  {% empty %}<tr><td colspan="6" class="text-muted p-3">No participants found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></div>
+{% include '_pagination.html' %}
+{% endblock %}

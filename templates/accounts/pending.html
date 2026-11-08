@@ -1,0 +1,7 @@
+{% extends 'registration/_auth_base.html' %}
+{% block title %}Waiting for approval{% endblock %}
+{% block card %}
+<h1 class="h4">Waiting for approval</h1>
+<p>Your email is confirmed. An administrator still has to give you a role before you can see study data. You will get an email when this is done.</p>
+<a href="{% url 'accounts:profile' %}">Update my profile</a>
+{% endblock %}

@@ -1,0 +1,9 @@
+A new account is waiting for a role on {{ SITE_NAME }}:
+
+Name: {{ new_user.get_full_name }}
+Email: {{ new_user.email }}
+Institution: {{ new_user.institution|default:"-" }}
+Position: {{ new_user.position|default:"-" }}
+
+Give a role or leave it without one:
+{{ link }}

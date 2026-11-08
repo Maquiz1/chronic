@@ -1,0 +1,9 @@
+Hello {{ user.first_name }},
+
+You created an account on {{ SITE_NAME }}. Confirm your email address by opening this link (valid for 24 hours):
+
+{{ link }}
+
+After that, an administrator will give you a role and you will get another email.
+
+If you did not register, ignore this email.

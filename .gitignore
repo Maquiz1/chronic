@@ -1,0 +1,15 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+db.sqlite3
+staticfiles/
+sent_emails/
+backups/
+*.sql
+*.sql.gz
+# Study documents stay off GitHub (proposal, CRFs, lab screenshots with patient details)
+documentations/
+# Generated workbooks; rebuild with: python manage.py build_dictionary (also downloadable in the app)
+data_dictionary/

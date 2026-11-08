@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% block title %}Delete {{ participant }}{% endblock %}
+{% block content %}
+<div class="row"><div class="col-md-8 col-lg-6">
+<div class="card border-danger"><div class="card-body">
+  <h1 class="h4 text-danger">Delete {{ participant }}?</h1>
+  <p>This removes the participant and every CRF section and query. Only do this for a duplicate or a test record. The change history keeps a copy.</p>
+  <form method="post">{% csrf_token %}
+    <label class="form-label">Type <strong>{{ participant.study_id }}</strong> to confirm</label>
+    <input class="form-control mb-3" name="confirm_id" autocomplete="off">
+    <button class="btn btn-danger">Delete permanently</button>
+    <a class="btn btn-link" href="{% url 'crf:detail' participant.pk %}">Cancel</a>
+  </form>
+</div></div>
+</div></div>
+{% endblock %}

@@ -1,0 +1,6 @@
+{% extends 'registration/_auth_base.html' %}
+{% block title %}Link not valid{% endblock %}
+{% block card %}
+<h1 class="h4">This link is not valid</h1>
+<p>It may have expired (links work for 24 hours) or been used already. Ask for a new one from the <a href="{% url 'login' %}">login page</a>.</p>
+{% endblock %}

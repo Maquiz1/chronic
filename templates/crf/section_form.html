@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load crf_tags %}
+{% block title %}{{ participant }} · Section {{ section.code }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+  <div>
+    <a href="{% url 'crf:detail' participant.pk %}" class="text-decoration-none">&larr; {{ participant }}</a>
+    <h1 class="h4 mb-0 mt-1">Section {{ section.code }}: {{ section.title }}</h1>
+  </div>
+  <nav class="d-flex flex-wrap gap-1">
+    {% for code in entry_codes %}
+      <a class="btn btn-sm {% if code == section.code %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url 'crf:section' participant.pk code %}">{{ code }}</a>
+    {% endfor %}
+  </nav>
+</div>
+<p class="text-muted small mb-3">Nothing here is mandatory: save what you have and come back when results are available. Items that will never be available can be ticked <em>Not done</em>.
+  {% if status.expected %}Currently {{ status.answered }} of {{ status.expected }} answered{% if status.not_done %}, {{ status.not_done }} not done{% endif %}.{% endif %}</p>
+{% if section.note %}<div class="alert alert-info py-2 small">{{ section.note }}</div>{% endif %}
+
+<form method="post" id="crf-form" novalidate>{% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <div class="card"><div class="card-body pt-2">
+  {% for row in rows %}
+    {% if row.group %}<div class="crf-group">{{ row.group }}</div>{% endif %}
+    <div class="crf-row row g-2 align-items-start" data-name="{{ row.spec.name }}" data-relevant="{{ row.relevant|tojson }}"
+         {% if row.by_unit %}data-by-unit="{{ row.by_unit|tojson }}" data-unit-field="{{ row.spec.unit_field }}"{% endif %}
+         {% if row.spec.ref %}data-ref="{{ row.spec.ref|tojson }}"{% endif %}>
+      <div class="col-md-5">
+        <label class="form-label mb-0" {% if row.bound %}for="{{ row.bound.id_for_label }}"{% endif %}><span class="qn">{{ row.spec.qn }}</span> {{ row.spec.label }}</label>
+        {% if row.spec.help %}<div class="form-text">{{ row.spec.help }}</div>{% endif %}
+      </div>
+      <div class="col-md-7">
+        {% if row.options %}
+          <div class="d-flex flex-wrap gap-3">
+          {% for bound, label in row.options %}
+            <div class="form-check"><input type="checkbox" class="form-check-input" name="{{ bound.html_name }}" id="{{ bound.id_for_label }}" {% if bound.value %}checked{% endif %}>
+              <label class="form-check-label" for="{{ bound.id_for_label }}">{{ label }}</label></div>
+          {% endfor %}
+          </div>
+        {% elif row.spec.type == 'select_one' and row.bound.field.widget.input_type == 'radio' %}
+          <div class="radio-inline d-flex flex-wrap align-items-center">
+            {% for radio in row.bound %}<label>{{ radio.tag }}{{ radio.choice_label }}</label>{% endfor %}
+            <a href="#" class="clear-link" data-clear="{{ row.bound.html_name }}">clear</a>
+          </div>
+        {% else %}
+          <div class="d-flex align-items-center flex-wrap">
+            {{ row.bound }}
+            <span class="unit">{{ row.spec.unit }}</span>
+            <span class="ref ms-2">{% if row.spec.ref %}ref {{ row.spec.ref|range_text }}{% endif %}</span>
+            <span class="flag ms-2"></span>
+          </div>
+        {% endif %}
+        {% if row.bound %}{% for error in row.bound.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}{% endif %}
+        {% if row.nd %}
+          <div class="form-check nd-box mt-1"><input type="checkbox" class="form-check-input" name="{{ row.nd.html_name }}" id="{{ row.nd.id_for_label }}" {% if row.nd.value %}checked{% endif %}>
+            <label class="form-check-label" for="{{ row.nd.id_for_label }}">Not done / not available</label></div>
+        {% endif %}
+      </div>
+    </div>
+  {% empty %}
+    <p class="text-muted my-3">Nothing to enter in this section.</p>
+  {% endfor %}
+  </div></div>
+
+  {% if scores %}
+  <div class="card mt-3"><div class="card-body small">
+    <strong>Calculated from saved values</strong> (updates after saving):
+    Child-Pugh {{ scores.cp_score|default:"—" }}{% if scores.cp_class %} (class {{ scores.cp_class }}){% endif %} ·
+    MELD-Na {{ scores.meld_na|default:"—" }} · APRI {{ scores.apri|default:"—" }}
+  </div></div>
+  {% endif %}
+
+  <div class="d-flex flex-wrap gap-2 mt-3 sticky-bottom bg-body-tertiary py-2">
+    <button class="btn btn-primary" name="save">Save</button>
+    {% if next_code %}<button class="btn btn-outline-primary" name="save_next">Save and go to Section {{ next_code }}</button>{% endif %}
+    <a class="btn btn-link" href="{% url 'crf:detail' participant.pk %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const form = document.getElementById('crf-form');
+  const rows = Array.from(form.querySelectorAll('.crf-row'));
+
+  function valueOf(name) {
+    const els = form.querySelectorAll('[name="' + name + '"]');
+    if (!els.length) return null;
+    const el = els[0];
+    if (el.type === 'radio') { const c = form.querySelector('[name="' + name + '"]:checked'); return c ? c.value : ''; }
+    if (el.type === 'checkbox') return el.checked;
+    return el.value;
+  }
+
+  function holds(cond) {
+    const [name, op, expected] = cond;
+    const v = valueOf(name);
+    if (op === 'filled') return v !== '' && v !== null && v !== false;
+    if (op === '==') return expected === true ? v === true : String(v) === String(expected);
+    if (op === '!=') return String(v) !== String(expected);
+    if (op === 'in') return expected.map(String).includes(String(v));
+    return true;
+  }
+
+  function updateLimits(row) {
+    const input = row.querySelector('input[type=number]');
+    if (!input) return;
+    let ref = row.dataset.ref ? JSON.parse(row.dataset.ref) : null;
+    const flag = row.querySelector('.flag');
+    if (row.dataset.byUnit) {
+      const cfg = JSON.parse(row.dataset.byUnit)[valueOf(row.dataset.unitField)];
+      row.querySelector('.unit').textContent = cfg ? cfg.unit : '(choose unit below)';
+      ref = cfg ? cfg.ref : null;
+      row.querySelector('.ref').textContent = ref ? 'ref ' + ref[0] + '–' + ref[1] : '';
+    }
+    const x = parseFloat(input.value);
+    flag.textContent = '';
+    flag.className = 'flag ms-2';
+    if (ref && !isNaN(x)) {
+      if (x < ref[0]) { flag.textContent = 'L'; flag.classList.add('flag-L'); }
+      else if (x > ref[1]) { flag.textContent = 'H'; flag.classList.add('flag-H'); }
+    }
+  }
+
+  function refresh() {
+    rows.forEach(function (row) {
+      const conds = JSON.parse(row.dataset.relevant || '[]');
+      row.classList.toggle('is-hidden', !conds.every(holds));
+      updateLimits(row);
+    });
+  }
+
+  form.addEventListener('input', refresh);
+  form.addEventListener('change', refresh);
+  form.querySelectorAll('[data-clear]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      form.querySelectorAll('[name="' + a.dataset.clear + '"]').forEach(function (r) { r.checked = false; });
+      refresh();
+    });
+  });
+  refresh();
+})();
+</script>
+{% endblock %}

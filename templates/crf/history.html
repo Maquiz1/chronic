@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block title %}{{ participant }} · history{% endblock %}
+{% block content %}
+<a href="{% url 'crf:detail' participant.pk %}" class="text-decoration-none">&larr; {{ participant }}</a>
+<h1 class="h4 mt-1">Change history</h1>
+<div class="card"><div class="table-responsive">
+<table class="table table-sm mb-0">
+  <thead><tr><th>When</th><th>Who</th><th>Section</th><th>Action</th><th>Changes</th></tr></thead>
+  <tbody>
+  {% for e in entries %}
+  <tr>
+    <td class="text-nowrap small">{{ e.date|date:"d M Y H:i" }}</td><td class="small">{{ e.user|default:"system" }}</td>
+    <td>{{ e.section }}</td><td class="small">{{ e.type }}</td>
+    <td class="small">{% for name, old, new in e.changes %}<div><code>{{ name }}</code>: {{ old|default_if_none:"—" }} → <strong>{{ new|default_if_none:"—" }}</strong></div>{% empty %}{% if e.type == 'Created' %}<span class="text-muted">first save</span>{% endif %}{% endfor %}</td>
+  </tr>
+  {% empty %}<tr><td colspan="5" class="text-muted">No history.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></div>
+{% endblock %}
