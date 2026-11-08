@@ -55,13 +55,13 @@
       {% if can.view_quality %}
       <div class="nav-label">Data quality</div>
       <a class="side-link {% if ns == 'quality' and url == 'overview' %}active{% endif %}" href="{% url 'quality:overview' %}">
-        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>Completeness</a>
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>Completeness{% if qcounts.to_review %}<span class="side-badge warn" title="Records incomplete, with check results or open queries">{{ qcounts.to_review }}</span>{% endif %}</a>
       <a class="side-link {% if ns == 'quality' and url == 'pending' %}active{% endif %}" href="{% url 'quality:pending' %}">
-        <svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7-.8 1.3z"/></svg>Pending results</a>
+        <svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm4.2 14.2L11 13V7h1.5v5.2l4.5 2.7-.8 1.3z"/></svg>Pending results{% if qcounts.pending %}<span class="side-badge warn" title="Records still waiting for investigation results (Section G)">{{ qcounts.pending }}</span>{% endif %}</a>
       <a class="side-link {% if ns == 'quality' and url == 'issues' %}active{% endif %}" href="{% url 'quality:issues' %}">
-        <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>Automatic checks</a>
+        <svg viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>Automatic checks<span class="side-badges">{% if qcounts.errors %}<span class="side-badge danger" title="Errors">{{ qcounts.errors }}</span>{% endif %}{% if qcounts.warnings %}<span class="side-badge warn" title="Warnings">{{ qcounts.warnings }}</span>{% endif %}</span></a>
       <a class="side-link {% if ns == 'quality' and url == 'queries' %}active{% endif %}" href="{% url 'quality:queries' %}">
-        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z"/></svg>Queries</a>
+        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12h-2v-2h2v2zm0-4h-2V6h2v4z"/></svg>Queries<span class="side-badges">{% if qcounts.open_queries %}<span class="side-badge danger" title="Open queries">{{ qcounts.open_queries }}</span>{% endif %}{% if qcounts.answered_queries %}<span class="side-badge info" title="Answered, waiting to be closed">{{ qcounts.answered_queries }}</span>{% endif %}</span></a>
       {% endif %}
       {% if can.view_data %}
       <div class="nav-label">Data</div>

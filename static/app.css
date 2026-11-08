@@ -183,3 +183,12 @@ input[type=number].form-control { max-width: 12rem; }
 }
 .dash-pct { min-width: 90px; }
 @media (max-width: 575.98px) { .dash-pct { min-width: 0; } .dash-sections td:nth-child(2) { min-width: 0; } }
+
+/* Counter badges in the side menu */
+.side-link .side-badges { margin-left: auto; display: inline-flex; gap: 4px; }
+.side-link > .side-badge { margin-left: auto; }
+.side-badge { min-width: 1.45rem; padding: .1rem .45rem; border-radius: 999px; font-size: .7rem; font-weight: 700;
+              line-height: 1.35; text-align: center; }
+.side-badge.warn { background: #f0ad00; color: #1f1300; }
+.side-badge.danger { background: #dc3545; color: #fff; }
+.side-badge.info { background: #818cf8; color: #fff; }

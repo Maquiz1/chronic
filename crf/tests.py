@@ -502,3 +502,25 @@ class DateTests(TestCase):
         rules = [row[0] for row in wb['Data Checks'].iter_rows(min_row=2, values_only=True)]
         self.assertIn('death_before_int', rules)
         self.assertIn('lab_after_death', rules)
+
+
+class SidebarCountTests(TestCase):
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.dm = make_user('data_manager')
+        self.client.force_login(self.dm)
+
+    def test_badges_show_and_update_after_saving(self):
+        today = timezone.localdate()
+        self.client.post(reverse('crf:create'), {'hospital_id': 'M55-00-01', 'interview_date': today,
+                                                 'admission_date': today + datetime.timedelta(days=3)})
+        r = self.client.get(reverse('dashboard'))
+        self.assertContains(r, 'class="side-badge danger" title="Errors">2<')  # admission in the future and after the interview
+        self.assertContains(r, 'title="Records still waiting for investigation results (Section G)">1<')
+        p = Participant.objects.get()
+        DataQuery.objects.create(participant=p, section='A', field='age', message='Check', raised_by=self.dm)
+        r = self.client.get(reverse('dashboard'))  # saving the query cleared the cached numbers
+        self.assertContains(r, 'title="Open queries">1<')
+        self.client.force_login(make_user('investigator'))
+        self.assertContains(self.client.get(reverse('dashboard')), 'title="Open queries">1<')

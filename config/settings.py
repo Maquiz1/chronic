@@ -144,6 +144,14 @@ STUDY_TARGET = int(os.environ.get('STUDY_TARGET', '0') or 0)  # planned sample s
 
 # --- Background jobs (Celery worker + beat, Redis broker). Schedules live in the database (Django admin). ---
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://cld-redis:6379/0')
+
+# --- Cache (Redis): small shared values such as the Data quality counts in the side menu ---
+CACHE_URL = os.environ.get('CACHE_URL', 'redis://cld-redis:6379/1')
+if CACHE_URL == 'locmem' or os.environ.get('DB_ENGINE') == 'sqlite' or (len(sys.argv) > 1 and sys.argv[1] == 'test'):
+    CACHES = {'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}}
+else:
+    CACHES = {'default': {'BACKEND': 'django.core.cache.backends.redis.RedisCache', 'LOCATION': CACHE_URL,
+                          'KEY_PREFIX': 'cld', 'TIMEOUT': 300}}
 CELERY_TASK_IGNORE_RESULT = True  # progress of exports is tracked in the database, not in Celery results
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_SERIALIZER = CELERY_RESULT_SERIALIZER = 'json'
