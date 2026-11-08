@@ -17,15 +17,15 @@
 </div>
 <div class="card"><div class="table-responsive">
 <table class="table table-sm table-hover mb-0">
-  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>Hospital ID</th>{% endif %}<th>Interview</th><th>Interviewer</th><th>Sections <span class="text-muted small">(green complete, red items missing, grey not started)</span></th><th class="text-end">Complete</th><th class="text-end">Missing</th></tr></thead>
+  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>Hospital ID</th>{% endif %}<th>Interview</th><th>Interviewer</th><th>Sections <span class="text-muted small">(green complete, red items missing, grey not started)</span></th><th style="min-width:170px">Completed items</th><th class="text-end">Missing</th></tr></thead>
   <tbody>
   {% for p, st in rows %}
   <tr>
     <td><a href="{% url 'crf:detail' p.pk %}" class="fw-semibold">{{ p.study_id }}</a>{% if p.locked %} <span title="Verified and locked">🔒</span>{% endif %}</td>
     {% if can.view_identity %}<td>{{ p.hospital_id|default:"—" }}</td>{% endif %}
     <td>{{ p.interview_date|date:"d M Y" }}</td><td class="small">{{ p.interviewer }}</td>
-    <td>{% for s in st.sections %}{% if s.state != 'calculated' %}{% if can.enter_data and not p.locked %}<a class="sec-chip {{ s.state }}" href="{% url 'crf:section' p.pk s.code %}" title="{{ s.title }}: {{ s.answered }}/{{ s.expected }}">{{ s.code }}</a>{% else %}<span class="sec-chip {{ s.state }}" title="{{ s.title }}">{{ s.code }}</span>{% endif %}{% endif %}{% endfor %}</td>
-    <td class="text-end"><span class="badge text-bg-{{ st.pct|pct_class }}">{{ st.pct }}%</span></td>
+    <td>{% for s in st.sections %}{% if s.state != 'calculated' %}<a class="sec-chip {{ s.state }}" href="{% url 'crf:section' p.pk s.code %}" title="{{ s.title }}: {{ s.answered }}/{{ s.expected }}{% if s.missing %} · missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}">{{ s.code }}</a>{% endif %}{% endfor %}</td>
+    <td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:8px" role="progressbar" aria-valuenow="{{ st.pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-{{ st.pct|pct_class }}" style="width:{{ st.pct }}%"></div></div><span class="small text-nowrap">{{ st.done }}/{{ st.expected }} · <strong>{{ st.pct }}%</strong></span></div></td>
     <td class="text-end">{% if st.missing_count %}<span class="badge text-bg-danger">{{ st.missing_count }}</span>{% else %}<span class="text-success">0</span>{% endif %}</td>
   </tr>
   {% empty %}<tr><td colspan="7" class="text-muted p-3">No participants found.</td></tr>

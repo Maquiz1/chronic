@@ -76,6 +76,7 @@ def record_status(values):
     expected = sum(s['expected'] for s in counted)
     done = sum(s['answered'] + s['not_done'] for s in counted)
     return {'sections': sections, 'pct': round(100 * done / expected) if expected else 100,
+            'done': done, 'expected': expected,
             'missing_count': sum(len(s['missing']) for s in counted),
             'complete': all(s['state'] == 'complete' for s in counted)}
 

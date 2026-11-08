@@ -17,6 +17,7 @@ def _absolute(path):
 
 def _send(subject, template, context, to):
     body = render_to_string(template, {**context, 'SITE_NAME': settings.SITE_NAME, 'SITE_URL': settings.SITE_URL})
+    body = f'{body.rstrip()}\n\n--\n{settings.SITE_NAME}: {settings.STUDY_TAGLINE}\n{settings.SITE_URL}\n'
     try:
         send_mail(f'[{settings.SITE_NAME}] {subject}', body, None, to, fail_silently=False)
     except Exception:  # an email problem must not break registration; it is logged for the administrator

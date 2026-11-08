@@ -22,6 +22,11 @@ HEADER_FONT = Font(bold=True, color='FFFFFF')
 YELLOW = PatternFill('solid', fgColor='FFF2CC')
 GREY = PatternFill('solid', fgColor='EDEDED')
 SECTION_FILL = PatternFill('solid', fgColor='D9E1F2')
+# Decisions sheet: High = red, Medium = yellow, Low = green.
+PRIORITY_FILLS = {'High': PatternFill('solid', fgColor='F8CBCB'), 'Medium': PatternFill('solid', fgColor='FFE699'),
+                  'Low': PatternFill('solid', fgColor='D9EAD3')}
+PRIORITY_FONTS = {'High': Font(bold=True, color='9C0006'), 'Medium': Font(bold=True, color='7F6000'),
+                  'Low': Font(color='274E13')}
 THIN = Side(style='thin', color='BFBFBF')
 BORDER = Border(left=THIN, right=THIN, top=THIN, bottom=THIN)
 WRAP = Alignment(wrap_text=True, vertical='top')
@@ -140,7 +145,7 @@ def build_workbook(section=None):
     ws.title = 'README'
     open_high = sum(1 for d in decisions if d[1] == 'High' and d[8] == 'Open')
     lines = [
-        ('DCLD Study: Data Dictionary', None),
+        ('MNH Liver Study (DCLD): Data Dictionary', None),
         (f'Version {spec.VERSION}, DRAFT, {spec.VERSION_DATE}. {open_high} High decisions open.', None),
         ('Contents', scope + ('' if section is None else '. Decisions, choices and derived values are limited to '
                               'this section; download "All sections" for the full workbook.')),
@@ -152,7 +157,8 @@ def build_workbook(section=None):
         ('Sources', f'documentations/tools/{spec.CRF_SOURCE} (CRF version {spec.VERSION}); documentations/si_units_range/units1.jpeg (MNH '
                     'Gastroenterology unit lab sheet: tests and units) and units2.jpeg (MNH Jeeva clinical chemistry '
                     'screen: units and reference limits). The study proposal was not available.'),
-        ('What to do', '1. Answer the Decisions sheet in the yellow columns, starting with the High items.\n'
+        ('What to do', '1. Answer the Decisions sheet in the yellow columns, starting with the High items (red; Medium '
+                       'items are yellow, Low green).\n'
                        '2. Check the Reference Ranges sheet with the MNH laboratory (rows marked Proposed).\n'
                        '3. Send the updated CRF and the proposal; a new version of this workbook and the system follow.'),
         ('Saving incomplete forms', 'No CRF field is mandatory in the system. Each section is saved on its own and '
@@ -251,9 +257,14 @@ def build_workbook(section=None):
     for r in range(3, len(rows) + 3):
         for col in (8, 9, 10):
             ws.cell(r, col).fill = YELLOW
-        if ws.cell(r, 2).value == 'Example':
+        priority = ws.cell(r, 2).value
+        if priority == 'Example':
             for col in range(1, 11):
                 ws.cell(r, col).fill = GREY
+        elif priority in PRIORITY_FILLS:
+            ws.cell(r, 2).fill = PRIORITY_FILLS[priority]
+            ws.cell(r, 2).font = PRIORITY_FONTS[priority]
+            ws.cell(r, 1).font = PRIORITY_FONTS[priority]
     dv = DataValidation(type='list', formula1='"Open,Answered,Example"', allow_blank=True)
     ws.add_data_validation(dv)
     dv.add(f'J3:J{len(rows) + 2}')
@@ -353,7 +364,7 @@ def codebook_pdf(section=None):
             data.append([Paragraph(escape(pdf_text(v)), cell) for v in row])
     table = Table(data, repeatRows=1, colWidths=[110, 34, 260, 52, 110, 40, 188])
     table.setStyle(TableStyle(style))
-    doc.build([Paragraph(f'DCLD Study codebook - {escape(scope)}', styles['Title']),
+    doc.build([Paragraph(f'MNH Liver Study (DCLD) codebook - {escape(scope)}', styles['Title']),
                Paragraph(f'Data dictionary version {spec.VERSION} ({spec.VERSION_DATE}). Codes match the "Codes" '
                          'export; the Excel data dictionary has the full detail and open decisions.', styles['Normal']),
                Spacer(1, 8), table])

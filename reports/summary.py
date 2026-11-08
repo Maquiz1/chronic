@@ -138,7 +138,8 @@ def progress_data(start=None, end=None):
         st = checks.record_status(v)
         issues = checks.all_issues(v)
         patients.append({
-            'p': p, 'pct': st['pct'], 'missing': st['missing_count'], 'complete': st['complete'],
+            'p': p, 'pct': st['pct'], 'done': st['done'], 'expected': st['expected'],
+            'missing': st['missing_count'], 'complete': st['complete'],
             'sections': [s for s in st['sections'] if s['state'] != 'calculated'],
             'errors': sum(1 for i in issues if i.level == checks.ERROR),
             'warnings': sum(1 for i in issues if i.level == checks.WARNING),

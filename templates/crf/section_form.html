@@ -4,20 +4,35 @@
 {% block content %}
 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
   <div>
-    <a href="{% url 'crf:detail' participant.pk %}" class="text-decoration-none">&larr; {{ participant }}</a>
+    <a href="{% if back %}{{ back }}{% else %}{% url 'crf:detail' participant.pk %}{% endif %}" class="text-decoration-none">&larr; {% if back %}Back{% else %}{{ participant }}{% endif %}</a>
+    <span class="text-muted small ms-2">{% if back %}{{ participant }}{% endif %}{% if can.view_identity and participant.hospital_id %}{% if back %} · {% endif %}Hospital ID {{ participant.hospital_id }}{% endif %}</span>
     <h1 class="h4 mb-0 mt-1">Section {{ section.code }}: {{ section.title }}</h1>
   </div>
   <nav class="d-flex flex-wrap gap-1">
     {% for code in entry_codes %}
-      <a class="btn btn-sm {% if code == section.code %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url 'crf:section' participant.pk code %}">{{ code }}</a>
+      <a class="btn btn-sm {% if code == section.code %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url 'crf:section' participant.pk code %}{% if back %}?back={{ back|urlencode }}{% endif %}">{{ code }}</a>
     {% endfor %}
   </nav>
 </div>
-<p class="text-muted small mb-3">Nothing here is mandatory: save what you have and come back when results are available. Items that will never be available can be ticked <em>Not done</em>.
+{% if deleted_row %}
+<div class="alert alert-danger">
+  <strong>This section was deleted</strong> on {{ deleted_row.deleted_at|date:"d M Y H:i" }} by {{ deleted_row.deleted_by|default:"—" }}{% if deleted_row.deletion_reason %} ("{{ deleted_row.deletion_reason }}"){% endif %}. It counts as not entered.
+  {% if can.restore_record %}
+  <form method="post" action="{% url 'crf:restore_section' participant.pk section.code %}" class="d-inline ms-2">{% csrf_token %}<button class="btn btn-sm btn-outline-danger">Restore it</button></form>
+  {% else %}An Admin can restore it from Deleted records.{% endif %}
+</div>
+{% elif readonly %}
+<div class="alert alert-secondary py-2 small">
+  {% if participant.locked %}<strong>Verified and locked</strong>: read-only. {% if can.lock_record %}Unlock it on the participant page to correct it.{% else %}A Data Manager can unlock it.{% endif %}
+  {% else %}<strong>View only</strong>: your role can see this form but not change it.{% endif %}
+</div>
+{% endif %}
+<p class="text-muted small mb-3">{% if not readonly %}Nothing here is mandatory: save what you have and come back when results are available. Items that will never be available can be ticked <em>Not done</em>. {% endif %}
   {% if status.expected %}Currently {{ status.answered }} of {{ status.expected }} answered{% if status.not_done %}, {{ status.not_done }} not done{% endif %}.{% endif %}</p>
 {% if section.note %}<div class="alert alert-info py-2 small">{{ section.note }}</div>{% endif %}
 
 <form method="post" id="crf-form" novalidate>{% csrf_token %}
+  {% if back %}<input type="hidden" name="back" value="{{ back }}">{% endif %}
   {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
   <div class="card"><div class="card-body pt-2">
   {% for row in rows %}
@@ -33,14 +48,14 @@
         {% if row.options %}
           <div class="d-flex flex-wrap gap-3">
           {% for bound, label in row.options %}
-            <div class="form-check"><input type="checkbox" class="form-check-input" name="{{ bound.html_name }}" id="{{ bound.id_for_label }}" {% if bound.value %}checked{% endif %}>
+            <div class="form-check"><input type="checkbox" class="form-check-input" name="{{ bound.html_name }}" id="{{ bound.id_for_label }}" {% if bound.value %}checked{% endif %} {% if readonly %}disabled{% endif %}>
               <label class="form-check-label" for="{{ bound.id_for_label }}">{{ label }}</label></div>
           {% endfor %}
           </div>
         {% elif row.spec.type == 'select_one' and row.bound.field.widget.input_type == 'radio' %}
           <div class="radio-inline d-flex flex-wrap align-items-center">
             {% for radio in row.bound %}<label>{{ radio.tag }}{{ radio.choice_label }}</label>{% endfor %}
-            <a href="#" class="clear-link" data-clear="{{ row.bound.html_name }}">clear</a>
+            {% if not readonly %}<a href="#" class="clear-link" data-clear="{{ row.bound.html_name }}">clear</a>{% endif %}
           </div>
         {% else %}
           <div class="d-flex align-items-center flex-wrap">
@@ -52,7 +67,7 @@
         {% endif %}
         {% if row.bound %}{% for error in row.bound.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}{% endif %}
         {% if row.nd %}
-          <div class="form-check nd-box mt-1"><input type="checkbox" class="form-check-input" name="{{ row.nd.html_name }}" id="{{ row.nd.id_for_label }}" {% if row.nd.value %}checked{% endif %}>
+          <div class="form-check nd-box mt-1"><input type="checkbox" class="form-check-input" name="{{ row.nd.html_name }}" id="{{ row.nd.id_for_label }}" {% if row.nd.value %}checked{% endif %} {% if readonly %}disabled{% endif %}>
             <label class="form-check-label" for="{{ row.nd.id_for_label }}">Not done / not available</label></div>
         {% endif %}
       </div>
@@ -72,11 +87,24 @@
 
   <div class="d-flex flex-wrap gap-2 mt-3 sticky-bottom bg-body-tertiary py-2">
     <span id="missing-count" class="align-self-center me-2"></span>
+    {% if not readonly %}
     <button class="btn btn-primary" name="save">Save</button>
     {% if next_code %}<button class="btn btn-outline-primary" name="save_next">Save and go to Section {{ next_code }}</button>{% endif %}
-    <a class="btn btn-link" href="{% url 'crf:detail' participant.pk %}">Cancel</a>
+    <button class="btn btn-outline-secondary" name="save_close">Save and close</button>
+    {% endif %}
+    {% if next_code %}<a class="btn btn-link" href="{% url 'crf:section' participant.pk next_code %}{% if back %}?back={{ back|urlencode }}{% endif %}">{% if readonly %}Next: Section {{ next_code }}{% else %}Skip to Section {{ next_code }} without saving{% endif %}</a>{% endif %}
+    <a class="btn btn-link" href="{% if back %}{{ back }}{% else %}{% url 'crf:detail' participant.pk %}{% endif %}">{% if readonly %}Close{% else %}Cancel{% endif %}</a>
   </div>
 </form>
+{% if can.delete_record and form.instance.pk and not readonly %}
+<details class="mt-3"><summary class="small text-danger">Delete this section's answers</summary>
+  <form method="post" action="{% url 'crf:section_delete' participant.pk section.code %}" class="d-flex flex-wrap gap-2 mt-2" onsubmit="return confirm('Delete Section {{ section.code }} of {{ participant }}? An Admin can restore it.')">{% csrf_token %}
+    <input type="hidden" name="back" value="{% if back %}{{ back }}{% else %}{% url 'crf:form_list' section.code %}{% endif %}">
+    <input name="reason" class="form-control form-control-sm" style="max-width:24rem" placeholder="Reason (e.g. entered for the wrong participant)" required>
+    <button class="btn btn-sm btn-outline-danger">Delete section</button>
+  </form>
+</details>
+{% endif %}
 {% endblock %}
 
 {% block scripts %}

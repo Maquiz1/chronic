@@ -13,7 +13,35 @@ from simple_history.models import HistoricalRecords
 from . import spec
 
 
-class Participant(models.Model):
+class SoftDeleteFields(models.Model):
+    """Deleting only hides a record: an Admin can restore it from "Deleted records"."""
+
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='+')
+    deletion_reason = models.CharField(max_length=255, blank=True)
+
+    class Meta:
+        abstract = True
+
+    def soft_delete(self, user, reason):
+        self.is_deleted, self.deleted_at, self.deleted_by, self.deletion_reason = True, timezone.now(), user, reason
+        self.save()
+
+    def restore(self):
+        self.is_deleted, self.deleted_at, self.deleted_by, self.deletion_reason = False, None, None, ''
+        self.save()
+
+
+class ActiveManager(models.Manager):
+    """Records that are not deleted. Use `all_objects` to include deleted ones."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
+
+
+class Participant(SoftDeleteFields):
     study_id = models.CharField('Study ID', max_length=30, unique=True, editable=False)
     # Required by the form; nullable only so records made before this field existed can be migrated and then filled.
     hospital_id = models.CharField('Hospital ID', max_length=30, unique=True, null=True,
@@ -34,6 +62,9 @@ class Participant(models.Model):
 
     history = HistoricalRecords(excluded_fields=['updated_at'])
 
+    objects = ActiveManager()
+    all_objects = models.Manager()
+
     class Meta:
         ordering = ['-created_at']
 
@@ -48,14 +79,17 @@ class Participant(models.Model):
             return
         super().save(*args, **kwargs)
 
-    def section(self, code):
-        """The saved section row, or None if nothing was entered yet (uses select_related data when present)."""
+    def section(self, code, include_deleted=False):
+        """The saved section row, or None if nothing was entered yet or it was deleted (uses select_related data)."""
         if code not in SECTION_MODELS:
             return None
         try:
-            return getattr(self, SECTION_RELATED_NAME[code])
+            row = getattr(self, SECTION_RELATED_NAME[code])
         except ObjectDoesNotExist:
             return None
+        if row.is_deleted and not include_deleted:
+            return None
+        return row
 
     def values(self):
         """All entered values as {column: value}, including header fields."""
@@ -81,14 +115,14 @@ class Participant(models.Model):
 
 def next_study_id():
     prefix = settings.STUDY_ID_PREFIX
-    last = (Participant.objects.select_for_update().filter(study_id__startswith=f'{prefix}-')
+    last = (Participant.all_objects.select_for_update().filter(study_id__startswith=f'{prefix}-')
             .order_by('-study_id').values_list('study_id', flat=True).first())
     number = int(last.rsplit('-', 1)[1]) + 1 if last else 1
     return f'{prefix}-{number:04d}'
 
 
-class SectionBase(models.Model):
-    """Fields shared by every section table."""
+class SectionBase(SoftDeleteFields):
+    """Fields shared by every section table. A deleted section counts as not entered until it is restored."""
 
     not_done = models.JSONField(default=list, blank=True,
                                 help_text='Fields marked "not done / not available"; not counted as missing.')

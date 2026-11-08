@@ -30,6 +30,9 @@ body { background: #f5f7fb; }
 .side-link svg { width: 18px; height: 18px; fill: currentColor; opacity: .85; flex-shrink: 0; }
 .side-link:hover { background: rgba(255,255,255,.07); color: #fff; }
 .side-link.active { background: var(--side-active); color: #fff; }
+.side-link.sub { padding: .32rem .65rem .32rem 1.1rem; font-size: .84rem; }
+.side-link .sub-code { display: inline-block; width: 1.3rem; font-weight: 700; color: #9db3dc; }
+.side-link.sub.active .sub-code { color: #fff; }
 .side-link:focus-visible { outline: 2px solid #9ec0ff; outline-offset: 1px; }
 .sidebar-user { padding: .85rem 1rem 1rem; border-top: 1px solid rgba(255,255,255,.08); }
 .user-chip { display: flex; align-items: center; gap: .6rem; color: #fff; text-decoration: none; min-width: 0; }

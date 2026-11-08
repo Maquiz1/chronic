@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block title %}Deleted records{% endblock %}
+{% block content %}
+<h1 class="h4">Deleted records</h1>
+<p class="text-muted small">Nothing is removed from the database when someone deletes a participant or a form: it is hidden from lists, exports and reports. Restore brings it back exactly as it was. The change history keeps every version.</p>
+<h2 class="h6 mt-3">Participants</h2>
+<div class="card mb-4"><div class="table-responsive">
+<table class="table table-sm align-middle mb-0">
+  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>Hospital ID</th>{% endif %}<th>Deleted</th><th>By</th><th>Reason</th><th></th></tr></thead>
+  <tbody>
+  {% for p in participants %}
+  <tr><td class="fw-semibold">{{ p.study_id }}</td>{% if can.view_identity %}<td class="small">{{ p.hospital_id|default:"—" }}</td>{% endif %}
+    <td class="small text-nowrap">{{ p.deleted_at|date:"d M Y H:i" }}</td><td class="small">{{ p.deleted_by|default:"—" }}</td><td class="small">{{ p.deletion_reason }}</td>
+    <td class="text-end"><form method="post" action="{% url 'crf:restore_participant' p.pk %}" onsubmit="return confirm('Restore {{ p.study_id }} with all its forms?')">{% csrf_token %}<button class="btn btn-sm btn-outline-success">Restore</button></form></td></tr>
+  {% empty %}<tr><td colspan="6" class="text-muted p-3">No deleted participants.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></div>
+<h2 class="h6">Forms (sections) of active participants</h2>
+<div class="card"><div class="table-responsive">
+<table class="table table-sm align-middle mb-0">
+  <thead><tr><th>Study ID</th><th>Form</th><th>Deleted</th><th>By</th><th>Reason</th><th></th></tr></thead>
+  <tbody>
+  {% for x in sections %}
+  <tr><td class="fw-semibold">{{ x.row.participant.study_id }}</td><td>{{ x.code }}: {{ x.title }}</td>
+    <td class="small text-nowrap">{{ x.row.deleted_at|date:"d M Y H:i" }}</td><td class="small">{{ x.row.deleted_by|default:"—" }}</td><td class="small">{{ x.row.deletion_reason }}</td>
+    <td class="text-end"><form method="post" action="{% url 'crf:restore_section' x.row.participant_id x.code %}">{% csrf_token %}<button class="btn btn-sm btn-outline-success">Restore</button></form></td></tr>
+  {% empty %}<tr><td colspan="6" class="text-muted p-3">No deleted forms.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></div>
+{% endblock %}

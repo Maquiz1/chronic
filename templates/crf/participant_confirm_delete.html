@@ -4,11 +4,13 @@
 <div class="row"><div class="col-md-8 col-lg-6">
 <div class="card border-danger"><div class="card-body">
   <h1 class="h4 text-danger">Delete {{ participant }}?</h1>
-  <p>This removes the participant and every CRF section and query. Only do this for a duplicate or a test record. The change history keeps a copy.</p>
+  <p>The participant and all its forms are hidden from lists, exports and reports. Use this for a duplicate or a test record. Nothing is lost: an Admin can restore it from <em>Deleted records</em>.</p>
   <form method="post">{% csrf_token %}
     <label class="form-label">Type <strong>{{ participant.study_id }}</strong> to confirm</label>
     <input class="form-control mb-3" name="confirm_id" autocomplete="off">
-    <button class="btn btn-danger">Delete permanently</button>
+    <label class="form-label">Reason</label>
+    <input class="form-control mb-3" name="reason" required placeholder="e.g. duplicate of CLD-0012">
+    <button class="btn btn-danger">Delete</button>
     <a class="btn btn-link" href="{% url 'crf:detail' participant.pk %}">Cancel</a>
   </form>
 </div></div>

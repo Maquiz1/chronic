@@ -1,4 +1,4 @@
-# DCLD Study: data management system
+# MNH Liver Study (DCLD): data management system
 
 Data entry, data quality and exports for *Clinical profile, disease severity and need for liver transplantation among
 patients with decompensated chronic liver disease at Muhimbili National Hospital*. Django 5.2 + MySQL 8.4, run in

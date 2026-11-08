@@ -3,6 +3,7 @@ import re
 from decimal import Decimal
 from io import BytesIO
 
+from django.conf import settings
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
@@ -42,6 +43,8 @@ class AccountsFlowTests(TestCase):
         # Cannot log in before confirming
         r = self.client.post(reverse('login'), {'username': 'asha@example.org', 'password': PASSWORD})
         self.assertContains(r, 'confirmation link')
+        self.assertIn('Muhimbili National Hospital', mail.outbox[0].body)  # every email says what the study is
+        self.assertIn(f'[{settings.SITE_NAME}]', mail.outbox[0].subject)
         link = re.search(r'https?://\S+/accounts/verify/\S+/', mail.outbox[0].body).group(0)
         self.client.get(link.split('localhost:8000')[-1] if 'localhost' in link else link)
         user.refresh_from_db()
@@ -164,7 +167,7 @@ class EntryTests(TestCase):
     def test_partial_save_then_complete_later(self):
         # Only haemoglobin known today; INR not done; the rest pending.
         r = self.client.post(self.section_url('G'), {'hb': '9.8', 'nd__inr': 'on', 'save': '1'})
-        self.assertRedirects(r, reverse('crf:detail', args=[self.p.pk]))
+        self.assertRedirects(r, self.section_url('G'))
         g = SECTION_MODELS['G'].objects.get(participant=self.p)
         self.assertEqual(g.hb, Decimal('9.8'))
         self.assertEqual(g.not_done, ['inr'])
@@ -198,15 +201,28 @@ class EntryTests(TestCase):
     def test_locked_record_cannot_be_edited(self):
         self.p.lock(make_user('data_manager'))
         r = self.client.post(self.section_url('A'), {'age_years': '40'})
-        self.assertRedirects(r, reverse('crf:detail', args=[self.p.pk]))
+        self.assertRedirects(r, self.section_url('A'))
         self.assertFalse(SECTION_MODELS['A'].objects.exists())
+        r = self.client.get(self.section_url('A'))
+        self.assertContains(r, 'Verified and locked')
+        self.assertNotContains(r, 'name="save"')
 
     def test_investigator_sees_no_phone_and_cannot_enter(self):
         self.client.force_login(make_user('investigator'))
         r = self.client.get(reverse('crf:detail', args=[self.p.pk]))
         self.assertNotContains(r, '0712000000')
         self.assertNotContains(r, 'M10-20-30')
-        self.assertEqual(self.client.get(self.section_url('A')).status_code, 403)
+        r = self.client.get(self.section_url('A'))  # view only
+        self.assertContains(r, 'View only')
+        self.assertNotContains(r, 'name="save"')
+        self.assertEqual(self.client.post(self.section_url('A'), {'age_years': '40'}).status_code, 403)
+        r = self.client.get(reverse('crf:form_list', args=['A']))
+        self.assertContains(r, 'View')
+        self.assertNotContains(r, '>Update<')
+        self.assertNotContains(r, '>Enter<')
+        r = self.client.get(reverse('crf:detail', args=[self.p.pk]))
+        self.assertNotContains(r, 'Edit header')
+        self.assertNotContains(r, 'Verify &amp; lock')
         r = self.client.post(reverse('exports:start'), {'dataset': 'combined', 'mode': 'codes', 'format': 'xlsx'})
         wb = load_workbook(BytesIO(self.client.get(reverse('exports:download', args=[r.json()['job']])).content))
         header = [c.value for c in wb['all_sections'][1]]
@@ -215,6 +231,47 @@ class EntryTests(TestCase):
         r = self.client.post(reverse('exports:start'), {'dataset': 'combined', 'mode': 'codes', 'format': 'xlsx',
                                                         'identifiable': '1'})
         self.assertEqual(r.status_code, 403)
+
+    def test_save_stays_on_section_and_save_close(self):
+        r = self.client.post(self.section_url('A'), {'age_years': '40', 'save': '1'})
+        self.assertRedirects(r, self.section_url('A'))
+        r = self.client.post(self.section_url('A'), {'age_years': '41', 'save_close': '1', 'back': '/records/forms/A/'})
+        self.assertRedirects(r, '/records/forms/A/')
+
+    def test_soft_delete_and_restore(self):
+        self.client.post(self.section_url('B'), {'ever_dx_cld': '1'})
+        dm, admin = make_user('data_manager'), make_user('admin')
+        self.client.force_login(dm)
+        # Delete one form: counts as not started, answers kept
+        self.client.post(reverse('crf:section_delete', args=[self.p.pk, 'B']), {'reason': 'wrong patient'})
+        self.assertIsNone(Participant.objects.get().section('B'))
+        self.assertEqual(SECTION_MODELS['B'].objects.get().ever_dx_cld, 1)
+        self.assertContains(self.client.get(self.section_url('B')), 'This section was deleted')
+        self.assertEqual(self.client.get(reverse('crf:deleted')).status_code, 403)  # restore is for Admins
+        # Delete the participant: gone from lists, hospital ID cannot be reused
+        self.client.post(reverse('crf:delete', args=[self.p.pk]), {'confirm_id': 'CLD-0001', 'reason': 'duplicate'})
+        self.assertFalse(Participant.objects.exists())
+        self.assertNotContains(self.client.get(reverse('crf:list')), reverse('crf:detail', args=[self.p.pk]))
+        r = self.client.post(reverse('crf:create'), {'hospital_id': 'M10-20-30', 'interview_date': timezone.localdate()})
+        self.assertContains(r, 'which was deleted')
+        # Admin restores both
+        self.client.force_login(admin)
+        r = self.client.get(reverse('crf:deleted'))
+        self.assertContains(r, 'CLD-0001')
+        self.client.post(reverse('crf:restore_participant', args=[self.p.pk]))
+        self.client.post(reverse('crf:restore_section', args=[self.p.pk, 'B']))
+        p = Participant.objects.get()
+        self.assertEqual(p.section('B').ever_dx_cld, 1)
+
+    def test_form_list(self):
+        self.client.post(self.section_url('G'), {'hb': '9.8'})
+        r = self.client.get(reverse('crf:form_list', args=['G']))
+        self.assertContains(r, 'CLD-0001')
+        self.assertContains(r, 'M10-20-30')  # Data Clerks see hospital IDs
+        self.assertContains(r, '>Update<')
+        r = self.client.get(reverse('crf:form_list', args=['G']) + '?show=complete')
+        self.assertNotContains(r, 'CLD-0001')
+        self.assertEqual(self.client.get(reverse('crf:form_list', args=['I'])).status_code, 404)
 
     def test_query_cycle(self):
         dm = make_user('data_manager')

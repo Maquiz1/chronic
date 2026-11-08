@@ -15,5 +15,7 @@ class _Perms:
 
 
 def site(request):
+    from crf import spec
     user = getattr(request, 'user', None)
-    return {'SITE_NAME': settings.SITE_NAME, 'can': _Perms(user) if user is not None else {}}
+    return {'SITE_NAME': settings.SITE_NAME, 'can': _Perms(user) if user is not None else {},
+            'crf_forms': [s for s in spec.SECTIONS if s.fields]}

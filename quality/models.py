@@ -6,6 +6,13 @@ from simple_history.models import HistoricalRecords
 from crf.models import Participant
 
 
+class ActiveQueryManager(models.Manager):
+    """Queries on deleted participants are hidden with them (and come back when the participant is restored)."""
+
+    def get_queryset(self):
+        return super().get_queryset().filter(participant__is_deleted=False)
+
+
 class DataQuery(models.Model):
     """A question about a value, raised by a Data Manager and answered by whoever enters the data."""
 
@@ -32,6 +39,9 @@ class DataQuery(models.Model):
     closed_at = models.DateTimeField(null=True, blank=True)
 
     history = HistoricalRecords()
+
+    objects = ActiveQueryManager()
+    all_objects = models.Manager()
 
     class Meta:
         ordering = ['-raised_at']

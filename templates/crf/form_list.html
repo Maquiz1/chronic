@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% load crf_tags %}
+{% block title %}Form {{ section.code }}: {{ section.title }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+  <h1 class="h4 mb-0">Form {{ section.code }}: {{ section.title }}</h1>
+  <nav class="d-flex flex-wrap gap-1">
+    {% for code in entry_codes %}<a class="btn btn-sm {% if code == section.code %}btn-primary{% else %}btn-outline-secondary{% endif %}" href="{% url 'crf:form_list' code %}">{{ code }}</a>{% endfor %}
+  </nav>
+</div>
+<form class="d-flex flex-wrap gap-2 align-items-center mb-3" method="get">
+  <input class="form-control form-control-sm" style="width:14rem" name="q" value="{{ request.GET.q }}" placeholder="Study ID{% if can.view_identity %} or hospital ID{% endif %}">
+  <select name="show" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+    <option value="all" {% if show == 'all' %}selected{% endif %}>All participants</option>
+    <option value="incomplete" {% if show == 'incomplete' %}selected{% endif %}>Items missing</option>
+    <option value="not_started" {% if show == 'not_started' %}selected{% endif %}>Not started</option>
+    <option value="complete" {% if show == 'complete' %}selected{% endif %}>Complete</option>
+  </select>
+  <button class="btn btn-sm btn-outline-secondary">Search</button>
+  {% if can.enter_data %}<a class="btn btn-sm btn-primary ms-auto" href="{% url 'crf:create' %}">+ New participant</a>{% endif %}
+</form>
+<div class="card"><div class="table-responsive">
+<table class="table table-sm table-hover align-middle mb-0">
+  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>Hospital ID</th>{% endif %}<th>Interview</th><th>Status</th><th class="text-end">Answered</th><th class="text-end">Missing</th><th>Last saved</th><th class="text-end">Actions</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+  {% with p=r.p s=r.status %}
+  <tr>
+    <td class="text-nowrap"><a class="fw-semibold" href="{% url 'crf:section' p.pk section.code %}?back={{ request.get_full_path|urlencode }}">{{ p.study_id }}</a>{% if p.locked %} <span title="Verified and locked">🔒</span>{% endif %}</td>
+    {% if can.view_identity %}<td class="small">{{ p.hospital_id|default:"—" }}</td>{% endif %}
+    <td class="small text-nowrap">{{ p.interview_date|date:"d M Y" }}</td>
+    <td>{% state_badge s.state %}</td>
+    <td class="text-end small">{{ s.answered }}/{{ s.expected }}{% if s.not_done %} <span class="text-muted">(+{{ s.not_done }} not done)</span>{% endif %}</td>
+    <td class="text-end">{% if s.missing %}<span class="badge text-bg-danger" title="{% for f in s.missing %}{{ f.qn }} {% endfor %}">{{ s.missing|length }}</span>{% else %}<span class="text-success">0</span>{% endif %}</td>
+    <td class="small text-nowrap">{% if r.row %}{{ r.row.updated_at|date:"d M Y H:i" }} · {{ r.row.updated_by }}{% else %}—{% endif %}</td>
+    <td class="text-end text-nowrap">
+      {% if can.enter_data and not p.locked %}
+        <a class="btn btn-sm {% if s.state == 'not_started' %}btn-primary{% else %}btn-outline-primary{% endif %} py-0" href="{% url 'crf:section' p.pk section.code %}?back={{ request.get_full_path|urlencode }}">{% if s.state == 'not_started' %}Enter{% else %}Update{% endif %}</a>
+      {% endif %}
+      <a class="btn btn-sm btn-outline-secondary py-0" href="{% url 'crf:section' p.pk section.code %}?back={{ request.get_full_path|urlencode }}">View</a>
+      {% if can.delete_record and r.row and not p.locked %}
+      <button class="btn btn-sm btn-outline-danger py-0" type="button" data-bs-toggle="collapse" data-bs-target="#del-{{ p.pk }}">Delete</button>
+      {% endif %}
+    </td>
+  </tr>
+  {% if can.delete_record and r.row and not p.locked %}
+  <tr class="collapse" id="del-{{ p.pk }}"><td colspan="8">
+    <form method="post" action="{% url 'crf:section_delete' p.pk section.code %}" class="d-flex flex-wrap gap-2 justify-content-end">{% csrf_token %}
+      <input type="hidden" name="back" value="{{ request.get_full_path }}">
+      <span class="small align-self-center">Delete Form {{ section.code }} of {{ p.study_id }}? An Admin can restore it.</span>
+      <input name="reason" class="form-control form-control-sm" style="max-width:22rem" placeholder="Reason" required>
+      <button class="btn btn-sm btn-danger">Delete</button>
+    </form>
+  </td></tr>
+  {% endif %}
+  {% endwith %}
+  {% empty %}<tr><td colspan="8" class="text-muted p-3">No participants.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div></div>
+<p class="small text-muted mt-2">{{ rows|length }} participant{{ rows|length|pluralize }}. Deleting a form hides its answers (it counts as not started) until an Admin restores it.</p>
+{% endblock %}

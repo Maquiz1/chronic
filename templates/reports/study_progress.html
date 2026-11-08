@@ -81,7 +81,7 @@
     <tbody>
     {% for s in d.sections %}
     <tr>
-      <td><strong>{{ s.code }}</strong> {{ s.title }}</td>
+      <td><a class="text-reset" href="{% url 'crf:form_list' s.code %}"><strong>{{ s.code }}</strong> {{ s.title }}</a></td>
       <td class="text-end">{{ s.complete }}</td>
       <td class="text-end">{% if s.incomplete %}<span class="missing-text">{{ s.incomplete }}</span>{% else %}0{% endif %}</td>
       <td class="text-end">{{ s.not_started }}</td>
@@ -104,6 +104,7 @@
 (function () {
   if (!window.Chart) return;
   const data = JSON.parse(document.getElementById('chart-data').textContent);
+  const FORM_URL = "{% url 'crf:form_list' 'X' %}";
   // Reference palette (dataviz skill): one series hue, an ordinal ramp, and fixed status colours.
   const C = {series: '#2a78d6', ramp: ['#86b6ef', '#2a78d6', '#104281'], good: '#0ca30c', critical: '#d03b3b',
              muted: '#c3c2b7', grid: '#e1e0d9', axis: '#898781', ink: '#52514e', surface: '#ffffff'};
@@ -134,6 +135,8 @@
       Object.assign({label: 'Items missing', data: data.sections.incomplete, backgroundColor: C.critical}, bar),
       Object.assign({label: 'Not started', data: data.sections.not_started, backgroundColor: C.muted}, bar)]},
     options: {indexAxis: 'y', scales: axes(true, true), interaction: {mode: 'index', axis: 'y', intersect: false},
+      onClick: function (e, items) { if (items.length) window.location.href = FORM_URL.replace('X', data.sections.labels[items[0].index]); },
+      onHover: function (e, items) { e.native.target.style.cursor = items.length ? 'pointer' : 'default'; },
       plugins: {legend: {position: 'bottom', labels: {boxWidth: 12, boxHeight: 12}},
         tooltip: {callbacks: {title: function (i) { return 'Section ' + i[0].label + ': ' + data.sections.titles[i[0].dataIndex]; }}}}}
   });

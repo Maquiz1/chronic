@@ -46,7 +46,11 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
         value = normalise_hospital_id(self.cleaned_data.get('hospital_id'))
         if not HOSPITAL_ID_PATTERN.match(value):
             raise forms.ValidationError('Use 3-30 letters, digits, "-", "/" or "." (as printed in the hospital system).')
-        existing = Participant.objects.filter(hospital_id=value).exclude(pk=self.instance.pk).first()
+        existing = Participant.all_objects.filter(hospital_id=value).exclude(pk=self.instance.pk).first()
+        if existing and existing.is_deleted:
+            raise forms.ValidationError(
+                f'Hospital ID {value} belongs to {existing.study_id}, which was deleted. Ask an Admin to restore it '
+                f'(Deleted records) instead of registering the patient again.')
         if existing:
             raise forms.ValidationError(format_html(
                 'Hospital ID {} is already registered as <a href="{}">{}</a>. Open that record instead of registering '

@@ -15,7 +15,7 @@
   <aside class="sidebar offcanvas-lg offcanvas-start" tabindex="-1" id="sidebar" aria-labelledby="sidebar-title">
     <div class="sidebar-brand">
       <a href="{% url 'dashboard' %}" id="sidebar-title">
-        <span class="brand-mark">D</span>
+        <span class="brand-mark">L</span>
         <span><strong>{{ SITE_NAME }}</strong><small>Muhimbili National Hospital</small></span>
       </a>
       <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close menu"></button>
@@ -25,7 +25,7 @@
       <div class="nav-label">Records</div>
       <a class="side-link {% if url == 'dashboard' %}active{% endif %}" href="{% url 'dashboard' %}">
         <svg viewBox="0 0 24 24"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"/></svg>Dashboard</a>
-      <a class="side-link {% if ns == 'crf' and url != 'create' %}active{% endif %}" href="{% url 'crf:list' %}">
+      <a class="side-link {% if ns == 'crf' and url != 'create' and url != 'form_list' and url != 'deleted' %}active{% endif %}" href="{% url 'crf:list' %}">
         <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05C16.19 13.89 17 15.02 17 16.5V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>Participants</a>
       {% endif %}
       {% if can.enter_data %}
@@ -33,6 +33,14 @@
         <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>New participant</a>
       {% endif %}
       {% if can.view_data %}
+      <div class="nav-label">Forms</div>
+      <a class="side-link {% if url == 'form_list' %}active{% endif %}" data-bs-toggle="collapse" href="#nav-forms" role="button" aria-expanded="{% if url == 'form_list' %}true{% else %}false{% endif %}" aria-controls="nav-forms">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>CRF forms <span class="ms-auto small">▾</span></a>
+      <div class="collapse {% if url == 'form_list' %}show{% endif %}" id="nav-forms">
+        {% for f in crf_forms %}
+        <a class="side-link sub {% if url == 'form_list' and request.resolver_match.kwargs.code|upper == f.code %}active{% endif %}" href="{% url 'crf:form_list' f.code %}"><span class="sub-code">{{ f.code }}</span>{{ f.title }}</a>
+        {% endfor %}
+      </div>
       <div class="nav-label">Reports</div>
       <a class="side-link {% if ns == 'reports' and url == 'study' %}active{% endif %}" href="{% url 'reports:study' %}">
         <svg viewBox="0 0 24 24"><path d="M5 9.2h3V19H5V9.2zM10.6 5h2.8v14h-2.8V5zm5.6 8H19v6h-2.8v-6z"/></svg>Study progress</a>
@@ -61,6 +69,8 @@
         <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>Users</a>
       <a class="side-link {% if ns == 'accounts' and url == 'roles' %}active{% endif %}" href="{% url 'accounts:roles' %}">
         <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Roles</a>
+      {% if can.restore_record %}<a class="side-link {% if url == 'deleted' %}active{% endif %}" href="{% url 'crf:deleted' %}">
+        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12 1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.13-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4z"/></svg>Deleted records</a>{% endif %}
       {% if can.manage_tasks %}<a class="side-link {% if ns == 'reports' and url == 'schedules' %}active{% endif %}" href="{% url 'reports:schedules' %}">
         <svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>Scheduled tasks</a>{% endif %}
       {% if user.is_superuser %}<a class="side-link" href="{% url 'admin:index' %}">
@@ -82,7 +92,8 @@
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
       </button>
       <span class="topbar-title text-truncate" id="topbar-title">{{ SITE_NAME }}</span>
-      <div class="dropdown ms-auto">
+      <form method="post" action="{% url 'logout' %}" class="ms-auto d-lg-none">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Log out</button></form>
+      <div class="dropdown ms-lg-auto">
         <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">{{ user.first_name|default:user.email }}</button>
         <ul class="dropdown-menu dropdown-menu-end">
           <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">My profile</a></li>
@@ -95,7 +106,7 @@
     <main class="content">
 {% else %}
 <header class="public-bar">
-  <a href="{% url 'login' %}"><span class="brand-mark">D</span> <strong>{{ SITE_NAME }}</strong></a>
+  <a href="{% url 'login' %}"><span class="brand-mark">L</span> <strong>{{ SITE_NAME }}</strong></a>
   {% if user.is_authenticated %}
   <form method="post" action="{% url 'logout' %}" class="ms-auto">{% csrf_token %}<button class="btn btn-sm btn-outline-light">Log out</button></form>
   {% endif %}
@@ -117,7 +128,7 @@
 {% endif %}
 {% endwith %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NuzOb2WaiOCAKfBH3v8PgnyxpMT" crossorigin="anonymous"></script>
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 <script>
   (function () {  // top bar shows the page title (the part of <title> before " · ")
     var t = document.getElementById('topbar-title');

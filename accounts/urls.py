@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
 
@@ -15,6 +16,7 @@ urlpatterns = [
     path('profile/password/', views.PasswordChangeView.as_view(), name='password_change'),
     path('password-reset/', auth_views.PasswordResetView.as_view(
         form_class=StyledPasswordResetForm,
+        extra_email_context={'SITE_NAME': settings.SITE_NAME, 'STUDY_TAGLINE': settings.STUDY_TAGLINE},
         email_template_name='emails/password_reset.txt', subject_template_name='emails/password_reset_subject.txt',
         success_url=reverse_lazy('accounts:password_reset_done')), name='password_reset'),
     path('password-reset/sent/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),

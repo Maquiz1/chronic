@@ -36,12 +36,12 @@
         <tbody>
         {% for s in status.sections %}
           <tr>
-            <td class="fw-semibold">{{ s.code }}</td>
-            <td>{{ s.title }}</td>
+            <td class="fw-semibold">{% if s.state != 'calculated' %}<a href="{% url 'crf:section' participant.pk s.code %}">{{ s.code }}</a>{% else %}<a href="#scores">{{ s.code }}</a>{% endif %}</td>
+            <td>{% if s.state != 'calculated' %}<a class="text-reset" href="{% url 'crf:section' participant.pk s.code %}">{{ s.title }}</a>{% else %}<a class="text-reset" href="#scores">{{ s.title }}</a>{% endif %}</td>
             <td>{% state_badge s.state %}</td>
             <td class="small">{% if s.state != 'calculated' %}{{ s.answered }}/{{ s.expected }}{% if s.not_done %} <span class="text-muted">(+{{ s.not_done }} not done)</span>{% endif %}{% endif %}</td>
             <td class="small missing-text">{% for f in s.missing|slice:":4" %}{{ f.qn }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if s.missing|length > 4 %} +{{ s.missing|length|add:"-4" }} more{% endif %}</td>
-            <td class="text-end">{% if s.state != 'calculated' and can.enter_data and not participant.locked %}<a class="btn btn-sm btn-outline-primary py-0" href="{% url 'crf:section' participant.pk s.code %}">{% if s.state == 'not_started' %}Enter{% else %}Update{% endif %}</a>{% endif %}</td>
+            <td class="text-end">{% if s.state != 'calculated' %}{% if can.enter_data and not participant.locked %}<a class="btn btn-sm btn-outline-primary py-0" href="{% url 'crf:section' participant.pk s.code %}">{% if s.state == 'not_started' %}Enter{% else %}Update{% endif %}</a>{% else %}<a class="btn btn-sm btn-outline-secondary py-0" href="{% url 'crf:section' participant.pk s.code %}">View</a>{% endif %}{% endif %}</td>
           </tr>
         {% endfor %}
         </tbody>
@@ -67,7 +67,7 @@
   </div>
 
   <div class="col-xl-5">
-    <div class="card"><div class="card-body">
+    <div class="card" id="scores"><div class="card-body">
       <h2 class="h5">Calculated scores</h2>
       <dl class="row mb-0">
         <dt class="col-7">BMI</dt><dd class="col-5">{{ scores.bmi|default:"—" }}</dd>

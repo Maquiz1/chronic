@@ -14,5 +14,6 @@
   {% if s.pending_labs %}<h3 style="color:#1f3864">Laboratory results still pending</h3>
   <ul>{% for name, n in s.pending_labs %}<li>{{ name }}: {{ n }}</li>{% endfor %}</ul>{% endif %}
   <p>Completeness by section is in the attached PDF.</p>
+  <p style="color:#666;font-size:12px;margin-top:24px">{{ SITE_NAME }}: {{ STUDY_TAGLINE }}</p>
   <p><a href="{{ links.dashboard }}">Dashboard</a> · <a href="{{ links.quality }}">Data quality</a> · <a href="{{ links.pending }}">Pending results</a> · <a href="{{ links.queries }}">Queries</a></p>
 </div>

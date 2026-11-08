@@ -35,7 +35,8 @@ class ExportPageView(RoleRequiredMixin, TemplateView):
         rows = []
         for code, label in ex.datasets():
             model = SECTION_MODELS.get(code)
-            rows.append({'key': code, 'label': label, 'count': model.objects.count() if model else total,
+            count = model.objects.filter(is_deleted=False, participant__is_deleted=False).count() if model else total
+            rows.append({'key': code, 'label': label, 'count': count,
                          'calculated': model is None})
         user = self.request.user
         recent = ExportJob.objects.filter(user=user, status=ExportJob.Status.DONE,

@@ -13,4 +13,9 @@ urlpatterns = [
     path('<int:pk>/lock/', views.LockView.as_view(), name='lock'),
     path('<int:pk>/delete/', views.ParticipantDeleteView.as_view(), name='delete'),
     path('<int:pk>/history/', views.HistoryView.as_view(), name='history'),
+    path('<int:pk>/section/<str:code>/delete/', views.SectionDeleteView.as_view(), name='section_delete'),
+    path('forms/<str:code>/', views.FormListView.as_view(), name='form_list'),
+    path('deleted/', views.DeletedRecordsView.as_view(), name='deleted'),
+    path('deleted/participant/<int:pk>/restore/', views.RestoreView.as_view(), {'kind': 'participant'}, name='restore_participant'),
+    path('deleted/section/<int:pk>/<str:code>/restore/', views.RestoreView.as_view(), {'kind': 'section'}, name='restore_section'),
 ]

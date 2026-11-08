@@ -12,12 +12,12 @@
 </div>
 <div class="card"><div class="table-responsive">
 <table class="table table-sm table-hover mb-0">
-  <thead><tr><th>Study ID</th>{% for code in entry_codes %}<th class="text-center">{{ code }}</th>{% endfor %}<th class="text-end">Overall</th><th class="text-end">Errors</th><th class="text-end">Warnings</th><th class="text-end">Open queries</th></tr></thead>
+  <thead><tr><th>Study ID</th>{% for code in entry_codes %}<th class="text-center"><a class="text-reset" href="{% url 'crf:form_list' code %}">{{ code }}</a></th>{% endfor %}<th class="text-end">Overall</th><th class="text-end">Errors</th><th class="text-end">Warnings</th><th class="text-end">Open queries</th></tr></thead>
   <tbody>
   {% for r in rows %}
   <tr>
     <td><a href="{% url 'crf:detail' r.p.pk %}">{{ r.p.study_id }}</a>{% if r.p.locked %} 🔒{% endif %}</td>
-    {% for s in r.sections %}<td class="text-center small {% if s.state == 'complete' %}table-success{% elif s.state == 'incomplete' %}table-danger{% else %}text-muted{% endif %}" title="{{ s.title }}{% if s.missing %}: missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}">{% if s.state == 'not_started' %}–{% else %}{{ s.pct }}%{% endif %}</td>{% endfor %}
+    {% for s in r.sections %}<td class="text-center small {% if s.state == 'complete' %}table-success{% elif s.state == 'incomplete' %}table-danger{% else %}text-muted{% endif %}" title="{{ s.title }}{% if s.missing %}: missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}"><a class="text-reset text-decoration-none d-block" href="{% url 'crf:section' r.p.pk s.code %}">{% if s.state == 'not_started' %}–{% else %}{{ s.pct }}%{% endif %}</a></td>{% endfor %}
     <td class="text-end fw-semibold">{{ r.status.pct }}%</td>
     <td class="text-end">{% if r.errors %}<span class="badge text-bg-danger">{{ r.errors }}</span>{% else %}0{% endif %}</td>
     <td class="text-end">{% if r.warnings %}<span class="badge text-bg-warning">{{ r.warnings }}</span>{% else %}0{% endif %}</td>

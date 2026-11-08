@@ -34,9 +34,12 @@ def report_recipients():
 
 
 def send_email(kind, user, subject, template, context, attachment=None):
-    context = {**context, 'user': user, 'SITE_NAME': settings.SITE_NAME, 'SITE_URL': settings.SITE_URL}
+    context = {**context, 'user': user, 'SITE_NAME': settings.SITE_NAME, 'SITE_URL': settings.SITE_URL,
+               'STUDY_TAGLINE': settings.STUDY_TAGLINE}
     subject = f'[{settings.SITE_NAME}] {subject}'
-    message = EmailMultiAlternatives(subject, render_to_string(f'emails/{template}.txt', context), None, [user.email])
+    body = render_to_string(f'emails/{template}.txt', context).rstrip()
+    body += f'\n\n--\n{settings.SITE_NAME}: {settings.STUDY_TAGLINE}\n{settings.SITE_URL}\n'
+    message = EmailMultiAlternatives(subject, body, None, [user.email])
     try:
         message.attach_alternative(render_to_string(f'emails/{template}.html', context), 'text/html')
     except Exception:  # an HTML version is optional

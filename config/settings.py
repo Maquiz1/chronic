@@ -22,7 +22,10 @@ DEBUG = env_bool('DJANGO_DEBUG', False)
 ALLOWED_HOSTS = env_list('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1')
 CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS')
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000').rstrip('/')
-SITE_NAME = os.environ.get('SITE_NAME', 'DCLD Study')
+SITE_NAME = os.environ.get('SITE_NAME', 'MNH Liver Study')
+# One line at the end of every email, so anyone receiving one knows what it is about.
+STUDY_TAGLINE = os.environ.get('STUDY_TAGLINE', 'Research study on advanced (decompensated) chronic liver disease and '
+                               'the need for liver transplantation at Muhimbili National Hospital, Dar es Salaam.')
 
 if not DEBUG and SECRET_KEY == 'dev-only-insecure-key' and not os.environ.get('ALLOW_INSECURE_KEY'):
     raise RuntimeError('Set DJANGO_SECRET_KEY (or DJANGO_DEBUG=true for local development).')
@@ -131,7 +134,7 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = env_bool('EMAIL_USE_TLS', False)
 EMAIL_USE_SSL = env_bool('EMAIL_USE_SSL', False)
 EMAIL_TIMEOUT = int(os.environ.get('EMAIL_TIMEOUT', '15'))
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'DCLD Study <no-reply@example.org>')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'MNH Liver Study <no-reply@example.org>')
 
 # --- Study ---
 STUDY_START_DATE = os.environ.get('STUDY_START_DATE', '')  # YYYY-MM-DD; interviews before it are flagged
