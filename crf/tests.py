@@ -408,7 +408,7 @@ class DictionaryTests(TestCase):
     def test_workbook_matches_spec(self):
         wb = build_workbook()
         self.assertEqual(wb.sheetnames, ['README', 'Sections', 'Data Dictionary', 'Choices', 'Derived Scores',
-                                         'Reference Ranges', 'Decisions', 'Change Log'])
+                                         'Reference Ranges', 'Data Checks', 'Decisions', 'Change Log'])
         names = [r[3] for r in wb['Data Dictionary'].iter_rows(min_row=2, values_only=True)]
         for _s, f in spec.all_fields():
             self.assertIn(f.name, names)
@@ -439,3 +439,52 @@ class RoleSplitTests(TestCase):
         for code in ('data_clerk', 'research_scientist', 'investigator'):
             self.assertContains(r, f'value="{code}"')
         self.assertNotContains(r, 'value="data_manager"')
+
+
+class DateTests(TestCase):
+    def setUp(self):
+        self.client.force_login(make_user('data_clerk'))
+        self.today = timezone.localdate()
+        self.adm = self.today - datetime.timedelta(days=10)
+        self.client.post(reverse('crf:create'), {'hospital_id': 'DT-001', 'interview_date': self.today - datetime.timedelta(days=8),
+                                                 'admission_date': self.adm})
+        self.p = Participant.objects.get()
+        self.url = reverse('crf:section', args=[self.p.pk, 'L'])
+
+    def test_outcome_shows_matching_date_and_fills_length_of_stay(self):
+        died = self.adm + datetime.timedelta(days=6)
+        self.client.post(self.url, {'outcome': '2', 'death_date': died, 'discharge_date': self.adm})
+        row = SECTION_MODELS['L'].objects.get()
+        self.assertEqual(row.death_date, died)
+        self.assertIsNone(row.discharge_date)  # skip rule: not asked when the patient died
+        self.assertEqual(row.los_days, 6)       # filled from the dates
+        f = spec.FIELD_BY_NAME['discharge_date'][1]
+        self.assertEqual(spec.relevance_text(f), '${outcome} = 1')
+
+    def test_impossible_dates_blocked(self):
+        r = self.client.post(self.url, {'outcome': '1', 'discharge_date': self.adm - datetime.timedelta(days=1)})
+        self.assertContains(r, 'cannot be before the admission date')
+        self.client.post(self.url, {'outcome': '2', 'death_date': self.adm + datetime.timedelta(days=1)})
+        r = self.client.post(reverse('crf:section', args=[self.p.pk, 'G']), {'lab_sample_date': self.adm + datetime.timedelta(days=3)})
+        self.assertContains(r, 'cannot be after the date of death')
+        r = self.client.post(reverse('crf:edit', args=[self.p.pk]), {'hospital_id': 'DT-001', 'interview_date': '2016-05-01',
+                                                                   'admission_date': '2016-04-01'})
+        self.assertContains(r, 'check the year')
+
+    def test_date_warnings_and_filter(self):
+        self.client.post(self.url, {'outcome': '2', 'death_date': self.adm + datetime.timedelta(days=1), 'los_days': '9'})
+        rules = {i.rule for i in checks.all_issues(Participant.objects.get().values())}
+        self.assertIn('death_before_int', rules)
+        self.assertIn('los_dates', rules)
+        self.client.force_login(make_user('data_manager'))
+        r = self.client.get(reverse('quality:issues') + '?category=Dates&participant=CLD-0001')
+        self.assertContains(r, 'Date of death is before the interview date')
+        self.assertContains(r, 'Open section L')
+        r = self.client.get(reverse('quality:issues') + '?category=Consistency&participant=CLD-0001')
+        self.assertNotContains(r, 'Date of death is before')
+
+    def test_dictionary_lists_checks(self):
+        wb = build_workbook()
+        rules = [row[0] for row in wb['Data Checks'].iter_rows(min_row=2, values_only=True)]
+        self.assertIn('death_before_int', rules)
+        self.assertIn('lab_after_death', rules)

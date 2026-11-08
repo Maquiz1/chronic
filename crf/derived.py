@@ -157,8 +157,13 @@ def lt_indicated(v):
     return 0
 
 
+def end_date(v):
+    """Discharge date when discharged alive, date of death when died."""
+    return v.get('discharge_date') if v.get('outcome') == 1 else (v.get('death_date') if v.get('outcome') == 2 else None)
+
+
 def los_from_dates(v):
-    a, b = v.get('admission_date'), v.get('outcome_date')
+    a, b = v.get('admission_date'), end_date(v)
     if not a or not b:
         return None
     return (b - a).days

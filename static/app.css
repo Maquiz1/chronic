@@ -155,11 +155,12 @@ input[type=number].form-control { max-width: 12rem; }
 .flag-H, .flag-L { font-weight: 700; color: #b02a37 !important; }
 .nd-box { font-size: .85rem; color: #6c757d; }
 .sec-chip { display: inline-block; width: 1.6rem; text-align: center; font-size: .75rem; padding: .15rem 0; border-radius: .2rem; margin-right: 2px; color: #fff; text-decoration: none; }
-.sec-chip.complete { background: #198754; } .sec-chip.incomplete { background: #dc3545; } .sec-chip.not_started { background: #adb5bd; }
-/* Missing items are red everywhere */
-.missing-text { color: #dc3545 !important; font-weight: 600; }
-.crf-row.is-missing { border-left: 4px solid #dc3545; background: #fff5f5; }
-.crf-row.is-missing .form-label { color: #b02a37; }
+.sec-chip.complete { background: #198754; } .sec-chip.incomplete { background: #f0ad00; color: #1f1300; }
+.sec-chip.error { background: #dc3545; } .sec-chip.not_started { background: #adb5bd; }
+/* Missing items are yellow (to finish); errors are red */
+.missing-text { color: #9a6700 !important; font-weight: 600; }
+.crf-row.is-missing { border-left: 4px solid #f0ad00; background: #fffbea; }
+.crf-row.is-missing .form-label { color: #7a5200; }
 .missing-badge { display: none; margin-left: .4rem; }
 .crf-row.is-missing .missing-badge { display: inline-block; }
 .table-sm td, .table-sm th { vertical-align: middle; }

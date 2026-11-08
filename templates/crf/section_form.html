@@ -41,7 +41,7 @@
          {% if row.by_unit %}data-by-unit="{{ row.by_unit|tojson }}" data-unit-field="{{ row.spec.unit_field }}"{% endif %}
          {% if row.spec.ref %}data-ref="{{ row.spec.ref|tojson }}"{% endif %}>
       <div class="col-md-5">
-        <label class="form-label mb-0" {% if row.bound %}for="{{ row.bound.id_for_label }}"{% endif %}><span class="qn">{{ row.spec.qn }}</span> {{ row.spec.label }}</label><span class="badge text-bg-danger missing-badge">missing</span>
+        <label class="form-label mb-0" {% if row.bound %}for="{{ row.bound.id_for_label }}"{% endif %}><span class="qn">{{ row.spec.qn }}</span> {{ row.spec.label }}</label><span class="badge text-bg-warning missing-badge">missing</span>
         {% if row.spec.help %}<div class="form-text">{{ row.spec.help }}</div>{% endif %}
       </div>
       <div class="col-md-7">
@@ -180,7 +180,7 @@
       if (isMissing) missing += 1;
     });
     const counter = document.getElementById('missing-count');
-    if (counter) counter.textContent = missing ? missing + ' item' + (missing === 1 ? '' : 's') + ' missing (red)' : 'No items missing';
+    if (counter) counter.textContent = missing ? missing + ' item' + (missing === 1 ? '' : 's') + ' missing (yellow)' : 'No items missing';
     if (counter) counter.className = missing ? 'missing-text' : 'text-success fw-semibold';
   }
 

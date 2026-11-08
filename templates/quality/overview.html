@@ -17,11 +17,11 @@
   {% for r in rows %}
   <tr>
     <td><a href="{% url 'crf:detail' r.p.pk %}">{{ r.p.study_id }}</a>{% if r.p.locked %} 🔒{% endif %}</td>
-    {% for s in r.sections %}<td class="text-center small {% if s.state == 'complete' %}table-success{% elif s.state == 'incomplete' %}table-danger{% else %}text-muted{% endif %}" title="{{ s.title }}{% if s.missing %}: missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}"><a class="text-reset text-decoration-none d-block" href="{% url 'crf:section' r.p.pk s.code %}">{% if s.state == 'not_started' %}–{% else %}{{ s.pct }}%{% endif %}</a></td>{% endfor %}
+    {% for s in r.sections %}<td class="text-center small {% if s.state == 'complete' %}table-success{% elif s.state == 'incomplete' %}table-warning{% elif s.state == 'error' %}table-danger{% else %}text-muted{% endif %}" title="{{ s.title }}{% if s.missing %}: missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}"><a class="text-reset text-decoration-none d-block" href="{% url 'crf:section' r.p.pk s.code %}">{% if s.state == 'not_started' %}–{% else %}{{ s.pct }}%{% endif %}</a></td>{% endfor %}
     <td class="text-end fw-semibold">{{ r.status.pct }}%</td>
-    <td class="text-end">{% if r.errors %}<span class="badge text-bg-danger">{{ r.errors }}</span>{% else %}0{% endif %}</td>
-    <td class="text-end">{% if r.warnings %}<span class="badge text-bg-warning">{{ r.warnings }}</span>{% else %}0{% endif %}</td>
-    <td class="text-end">{{ r.queries }}</td>
+    <td class="text-end">{% if r.errors %}<a class="badge text-bg-danger text-decoration-none" href="{% url 'quality:issues' %}?participant={{ r.p.study_id }}&level=error" title="Show these errors">{{ r.errors }}</a>{% else %}0{% endif %}</td>
+    <td class="text-end">{% if r.warnings %}<a class="badge text-bg-warning text-decoration-none" href="{% url 'quality:issues' %}?participant={{ r.p.study_id }}&level=warning" title="Show these warnings">{{ r.warnings }}</a>{% else %}0{% endif %}</td>
+    <td class="text-end">{% if r.queries %}<a class="badge text-bg-primary text-decoration-none" href="{% url 'quality:queries' %}?participant={{ r.p.study_id }}" title="Show these queries">{{ r.queries }}</a>{% else %}0{% endif %}</td>
   </tr>
   {% empty %}<tr><td colspan="20" class="text-muted p-3">Nothing needs attention.</td></tr>
   {% endfor %}

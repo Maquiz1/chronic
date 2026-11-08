@@ -11,6 +11,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from crf import derived, spec
+from crf.check_rules import CATEGORY, DATE_FLOOR
 from crf.models import SECTION_MODELS
 
 ERROR, WARNING = 'error', 'warning'
@@ -23,6 +24,10 @@ class Issue:
     field: str          # column name ('' for record-level)
     message: str
     rule: str = ''      # short id, used to avoid raising the same query twice
+
+    @property
+    def category(self):
+        return CATEGORY.get(self.rule, 'Consistency')
 
     @property
     def label(self):
@@ -71,7 +76,17 @@ def section_status(code, values):
 
 
 def record_status(values):
+    """Completeness of the whole record. A section with a failed check (error) gets state 'error' (red); a section
+    with items missing is 'incomplete' (yellow)."""
     sections = [section_status(s.code, values) for s in spec.SECTIONS]
+    errors = {}
+    for issue in all_issues(values):
+        if issue.level == ERROR:
+            errors[issue.section] = errors.get(issue.section, 0) + 1
+    for s in sections:
+        s['errors'] = errors.get(s['code'], 0)
+        if s['errors'] and s['state'] in ('complete', 'incomplete'):
+            s['state'] = 'error'
     counted = [s for s in sections if s['state'] != 'calculated']
     expected = sum(s['expected'] for s in counted)
     done = sum(s['answered'] + s['not_done'] for s in counted)
@@ -139,7 +154,20 @@ def consistency_issues(values):
         out.append(Issue(level, section, field, message, rule))
 
     today = timezone.localdate()
-    interview, admission, outcome_date = v.get('interview_date'), v.get('admission_date'), v.get('outcome_date')
+    interview, admission = v.get('interview_date'), v.get('admission_date')
+    sample, discharge, death = v.get('lab_sample_date'), v.get('discharge_date'), v.get('death_date')
+    if v.get('outcome') != 1:
+        discharge = None
+    if v.get('outcome') != 2:
+        death = None
+    floor = datetime.date.fromisoformat(DATE_FLOOR)
+    for field, section, label, value in (('interview_date', 'Header', 'Date of interview', interview),
+                                         ('admission_date', 'Header', 'Admission date', admission),
+                                         ('lab_sample_date', 'G', 'Laboratory sample date', sample),
+                                         ('discharge_date', 'L', 'Date of discharge', discharge),
+                                         ('death_date', 'L', 'Date of death', death)):
+        if value and value < floor:
+            add(ERROR, section, field, f'{label} {value:%d %b %Y} is before {floor:%Y}: check the year.', 'date_old')
     if interview and interview > today:
         add(ERROR, 'Header', 'interview_date', 'Date of interview is in the future.', 'date_future')
     if settings.STUDY_START_DATE and interview:
@@ -148,19 +176,33 @@ def consistency_issues(values):
             add(WARNING, 'Header', 'interview_date', f'Date of interview is before the study start ({start}).', 'date_start')
     if admission and interview and admission > interview:
         add(ERROR, 'Header', 'admission_date', 'Admission date is after the interview date.', 'adm_after_int')
-    if not v.get('hospital_id') and 'hospital_id' in v:
-        add(ERROR, 'Header', 'hospital_id', 'MRN is missing (required). Add it with "Edit header".', 'hosp_id')
+    if admission and interview and (interview - admission).days > 60:
+        add(WARNING, 'Header', 'interview_date',
+            f'Interview {(interview - admission).days} days after admission: check both dates.', 'int_late')
     if not admission:
         add(WARNING, 'Header', 'admission_date', 'Admission date is missing (needed for length of stay).', 'adm_missing')
-    if outcome_date and admission and outcome_date < admission:
-        add(ERROR, 'L', 'outcome_date', 'Discharge/death date is before the admission date.', 'out_before_adm')
-    if outcome_date and outcome_date > today:
-        add(ERROR, 'L', 'outcome_date', 'Discharge/death date is in the future.', 'out_future')
-    sample = v.get('lab_sample_date')
     if sample and sample > today:
         add(ERROR, 'G', 'lab_sample_date', 'Laboratory sample date is in the future.', 'lab_future')
     if sample and admission and (sample - admission).days < -7:
         add(WARNING, 'G', 'lab_sample_date', 'Laboratory sample is more than 7 days before admission.', 'lab_early')
+    if sample and death and sample > death:
+        add(ERROR, 'G', 'lab_sample_date', 'Laboratory sample is after the date of death.', 'lab_after_death')
+    if sample and discharge and sample > discharge:
+        add(WARNING, 'G', 'lab_sample_date', 'Laboratory sample is after the date of discharge.', 'lab_after_discharge')
+    for field, label, value in (('discharge_date', 'Date of discharge', discharge), ('death_date', 'Date of death', death)):
+        if not value:
+            continue
+        if value > today:
+            add(ERROR, 'L', field, f'{label} is in the future.', 'out_future')
+        if admission and value < admission:
+            add(ERROR, 'L', field, f'{label} is before the admission date.', 'out_before_adm')
+        elif admission and (value - admission).days > 180:
+            add(WARNING, 'L', field, f'{(value - admission).days} days between admission and {label.lower()}.', 'los_long')
+    if discharge and interview and discharge < interview:
+        add(WARNING, 'L', 'discharge_date', 'Discharged before the interview date: interviewed after discharge?', 'disch_before_int')
+    if death and interview and death < interview:
+        add(WARNING, 'L', 'death_date', 'Date of death is before the interview date: information from relatives?',
+            'death_before_int')
 
     los, los_dates = v.get('los_days'), derived.los_from_dates(v)
     if los is not None and los_dates is not None and abs(los - los_dates) > 1:

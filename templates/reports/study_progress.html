@@ -58,7 +58,7 @@
   </div></div></div>
   <div class="col-xl-6"><div class="card h-100"><div class="card-body">
     <h2 class="h6">Completeness by section</h2>
-    <p class="small text-muted mb-2">Participants per section: complete, items missing, not started.</p>
+    <p class="small text-muted mb-2">Participants per section: complete, items missing, with errors, not started.</p>
     <div class="chart-box"><canvas id="ch-sections" aria-label="Completeness by section" role="img"></canvas></div>
   </div></div></div>
   <div class="col-md-6"><div class="card h-100"><div class="card-body">
@@ -77,18 +77,19 @@
   <h2 class="h6">Progress by section</h2>
   <div class="table-responsive">
   <table class="table table-sm align-middle mb-0">
-    <thead><tr><th>Section</th><th class="text-end">Complete</th><th class="text-end">Items missing</th><th class="text-end">Not started</th><th class="text-end">Missing items</th><th style="min-width:180px">Average completeness</th></tr></thead>
+    <thead><tr><th>Section</th><th class="text-end">Complete</th><th class="text-end">Items missing</th><th class="text-end">With errors</th><th class="text-end">Not started</th><th class="text-end">Missing items</th><th style="min-width:180px">Average completeness</th></tr></thead>
     <tbody>
     {% for s in d.sections %}
     <tr>
       <td><a class="text-reset" href="{% url 'crf:form_list' s.code %}"><strong>{{ s.code }}</strong> {{ s.title }}</a></td>
       <td class="text-end">{{ s.complete }}</td>
       <td class="text-end">{% if s.incomplete %}<span class="missing-text">{{ s.incomplete }}</span>{% else %}0{% endif %}</td>
+      <td class="text-end">{% if s.error %}<span class="text-danger fw-semibold">{{ s.error }}</span>{% else %}0{% endif %}</td>
       <td class="text-end">{{ s.not_started }}</td>
       <td class="text-end">{% if s.missing_items %}<a class="missing-text" href="{% url 'quality:pending' %}?section={{ s.code }}">{{ s.missing_items }}</a>{% else %}<span class="text-success">0</span>{% endif %}</td>
       <td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:8px" role="progressbar" aria-valuenow="{{ s.pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-{{ s.pct|pct_class }}" style="width:{{ s.pct }}%"></div></div><span class="small" style="min-width:2.5rem">{{ s.pct }}%</span></div></td>
     </tr>
-    {% empty %}<tr><td colspan="6" class="text-muted">No participants in this period.</td></tr>
+    {% empty %}<tr><td colspan="7" class="text-muted">No participants in this period.</td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -106,7 +107,7 @@
   const data = JSON.parse(document.getElementById('chart-data').textContent);
   const FORM_URL = "{% url 'crf:form_list' 'X' %}";
   // Reference palette (dataviz skill): one series hue, an ordinal ramp, and fixed status colours.
-  const C = {series: '#2a78d6', ramp: ['#86b6ef', '#2a78d6', '#104281'], good: '#0ca30c', critical: '#d03b3b',
+  const C = {series: '#2a78d6', ramp: ['#86b6ef', '#2a78d6', '#104281'], good: '#0ca30c', warning: '#fab219', critical: '#d03b3b',
              muted: '#c3c2b7', grid: '#e1e0d9', axis: '#898781', ink: '#52514e', surface: '#ffffff'};
   Chart.defaults.font.family = 'system-ui, -apple-system, "Segoe UI", sans-serif';
   Chart.defaults.color = C.ink;
@@ -132,7 +133,8 @@
     type: 'bar',
     data: {labels: data.sections.labels, datasets: [
       Object.assign({label: 'Complete', data: data.sections.complete, backgroundColor: C.good}, bar),
-      Object.assign({label: 'Items missing', data: data.sections.incomplete, backgroundColor: C.critical}, bar),
+      Object.assign({label: 'Items missing', data: data.sections.incomplete, backgroundColor: C.warning}, bar),
+      Object.assign({label: 'Errors', data: data.sections.error, backgroundColor: C.critical}, bar),
       Object.assign({label: 'Not started', data: data.sections.not_started, backgroundColor: C.muted}, bar)]},
     options: {indexAxis: 'y', scales: axes(true, true), interaction: {mode: 'index', axis: 'y', intersect: false},
       onClick: function (e, items) { if (items.length) window.location.href = FORM_URL.replace('X', data.sections.labels[items[0].index]); },

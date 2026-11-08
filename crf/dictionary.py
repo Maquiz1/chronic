@@ -11,9 +11,11 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 
 try:  # works both inside Django (crf.spec) and as `python -m crf.dictionary`
+    from . import check_rules
     from . import decisions as decisions_mod
     from . import spec
 except ImportError:  # pragma: no cover
+    import check_rules
     import decisions as decisions_mod
     import spec
 
@@ -176,6 +178,7 @@ def build_workbook(section=None):
         ('Choices', 'Code lists.'),
         ('Derived Scores', 'Values the system calculates: BMI, unit conversions, Child-Pugh, MELD-Na, APRI, K1-K2.'),
         ('Reference Ranges', 'Units and limits for every laboratory test, with their source (Section G).'),
+        ('Data Checks', 'Every automatic check (dates, ranges, consistency): errors and warnings, and which are blocked at entry.'),
         ('Decisions', 'Problems found in the CRF, what the system does for now, and who decides.'),
         ('Change Log', 'What changed in each version.'),
     ]
@@ -245,6 +248,16 @@ def build_workbook(section=None):
         ws = wb.create_sheet('Reference Ranges')
         _table(ws, ['Qn', 'Test', 'Unit', 'Lower limit', 'Upper limit', 'Check limits', 'Hard limits', 'Source'], rows,
                [6, 26, 12, 12, 12, 14, 14, 36])
+
+    # Data checks ---------------------------------------------------------------------------------------------------
+    ws = wb.create_sheet('Data Checks')
+    rows = [[rule, category, level.title(), rule_section, text, 'Yes' if 'blocked at entry' in text else 'No']
+            for rule, level, category, rule_section, text in check_rules.RULES
+            if section is None or rule_section in (section, 'Any')]
+    _table(ws, ['Rule', 'Category', 'Level', 'Section', 'Check', 'Blocked at entry'], rows, [18, 13, 9, 9, 90, 10])
+    for r in range(2, len(rows) + 2):
+        level = ws.cell(r, 3).value
+        ws.cell(r, 3).fill = PRIORITY_FILLS['High'] if level == 'Error' else PRIORITY_FILLS['Medium']
 
     # Decisions -----------------------------------------------------------------------------------------------------
     ws = wb.create_sheet('Decisions')

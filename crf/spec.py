@@ -350,9 +350,15 @@ SECTIONS = [
                  'calculated (Derived Scores, D37).'),
     ]),
     Section('L', 'outcome', 'Outcome of current admission', [
-        Field('los_days', 'Length of hospital stay', 'integer', qn='L1', unit='days', hard=(0, 365), check=(0, 90)),
+        Field('los_days', 'Length of hospital stay', 'integer', qn='L1', unit='days', hard=(0, 365), check=(0, 90),
+              notes='Filled in automatically from the admission and discharge/death dates when left empty.'),
         Field('outcome', 'Outcome', 'select_one', qn='L2', choices='outcome', status='Code proposed'),
-        Field('outcome_date', 'Date of discharge or death', 'date', qn='L3', status='Added (not on CRF)', decision='D21'),
+        Field('discharge_date', 'Date of discharge', 'date', qn='L3a', relevant=[('outcome', '==', 1)],
+              status='Added (not on CRF)', decision='D21',
+              notes='Asked when L2 = Discharged alive. Cannot be before admission or in the future.'),
+        Field('death_date', 'Date of death', 'date', qn='L3b', relevant=[('outcome', '==', 2)],
+              status='Added (not on CRF)', decision='D21',
+              notes='Asked when L2 = Died. Cannot be before admission or in the future.'),
     ]),
 ]
 
@@ -399,7 +405,7 @@ DERIVED = [
     Derived('lt_indicated', 'Liver transplant indicated (study outcome)', 'K',
             '1 if any of: Child-Pugh C, MELD-Na >= 15, K1, K2, K3, HCC within Milan; 0 if all are known and none is '
             'met; blank otherwise', '0-1', source='Proposed definition', status='Proposed', decision='D37'),
-    Derived('los_from_dates', 'Length of stay from dates', 'L', 'outcome_date - admission_date in days', '0-365',
+    Derived('los_from_dates', 'Length of stay from dates', 'L', '(discharge_date or death_date) - admission_date in days', '0-365',
             source='Check on L1', status='Added (not on CRF)', decision='D21'),
 ]
 

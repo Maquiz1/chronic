@@ -9,7 +9,8 @@ register = template.Library()
 
 STATE = {
     'complete': ('success', 'Complete'),
-    'incomplete': ('danger', 'Items missing'),
+    'incomplete': ('warning', 'Items missing'),
+    'error': ('danger', 'Errors'),
     'not_started': ('secondary', 'Not started'),
     'calculated': ('info', 'Calculated'),
 }
@@ -52,11 +53,8 @@ def range_text(r):
 
 @register.filter
 def pct_class(pct):
-    if pct >= 100:
-        return 'success'
-    if pct >= 60:
-        return 'warning'
-    return 'danger'
+    """Green when complete, yellow until then (red is kept for errors)."""
+    return 'success' if pct >= 100 else 'warning'
 
 
 @register.filter

@@ -13,6 +13,7 @@
   <select name="show" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
     <option value="all" {% if show == 'all' %}selected{% endif %}>All participants</option>
     <option value="incomplete" {% if show == 'incomplete' %}selected{% endif %}>Items missing</option>
+    <option value="error" {% if show == 'error' %}selected{% endif %}>With errors</option>
     <option value="not_started" {% if show == 'not_started' %}selected{% endif %}>Not started</option>
     <option value="complete" {% if show == 'complete' %}selected{% endif %}>Complete</option>
   </select>
@@ -31,7 +32,7 @@
     <td class="small text-nowrap">{{ p.interview_date|date:"d M Y" }}</td>
     <td>{% state_badge s.state %}</td>
     <td class="text-end small">{{ s.answered }}/{{ s.expected }}{% if s.not_done %} <span class="text-muted">(+{{ s.not_done }} not done)</span>{% endif %}</td>
-    <td class="text-end">{% if s.missing %}<span class="badge text-bg-danger" title="{% for f in s.missing %}{{ f.qn }} {% endfor %}">{{ s.missing|length }}</span>{% else %}<span class="text-success">0</span>{% endif %}</td>
+    <td class="text-end">{% if s.missing %}<span class="badge text-bg-warning" title="{% for f in s.missing %}{{ f.qn }} {% endfor %}">{{ s.missing|length }}</span>{% else %}<span class="text-success">0</span>{% endif %}</td>
     <td class="small text-nowrap">{% if r.row %}{{ r.row.updated_at|date:"d M Y H:i" }} · {{ r.row.updated_by }}{% else %}—{% endif %}</td>
     <td class="text-end text-nowrap">
       {% if can.enter_data and not p.locked %}

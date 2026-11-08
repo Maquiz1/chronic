@@ -3,11 +3,12 @@
 {% block content %}
 <h1 class="h4">Data quality</h1>
 {% include 'quality/_nav.html' with active='queries' %}
+{% if participant %}<p class="mb-2"><span class="badge text-bg-light border">Participant {{ participant }} <a href="?status={{ status }}" class="ms-1 text-decoration-none" aria-label="Show all participants">✕</a></span></p>{% endif %}
 <div class="btn-group btn-group-sm mb-3">
-  <a class="btn btn-outline-secondary {% if status == 'open' %}active{% endif %}" href="?status=open">Open ({{ counts.open }})</a>
-  <a class="btn btn-outline-secondary {% if status == 'answered' %}active{% endif %}" href="?status=answered">Answered ({{ counts.answered }})</a>
-  <a class="btn btn-outline-secondary {% if status == 'closed' %}active{% endif %}" href="?status=closed">Closed ({{ counts.closed }})</a>
-  <a class="btn btn-outline-secondary {% if status == 'all' %}active{% endif %}" href="?status=all">All</a>
+  <a class="btn btn-outline-secondary {% if status == 'open' %}active{% endif %}" href="?status=open{% if participant %}&participant={{ participant }}{% endif %}">Open ({{ counts.open }})</a>
+  <a class="btn btn-outline-secondary {% if status == 'answered' %}active{% endif %}" href="?status=answered{% if participant %}&participant={{ participant }}{% endif %}">Answered ({{ counts.answered }})</a>
+  <a class="btn btn-outline-secondary {% if status == 'closed' %}active{% endif %}" href="?status=closed{% if participant %}&participant={{ participant }}{% endif %}">Closed ({{ counts.closed }})</a>
+  <a class="btn btn-outline-secondary {% if status == 'all' %}active{% endif %}" href="?status=all{% if participant %}&participant={{ participant }}{% endif %}">All</a>
 </div>
 <p class="small text-muted">Data Managers raise queries (from Automatic checks or a participant page). Data Clerks correct the record and answer. The Data Manager then closes the query.</p>
 {% for q in object_list %}{% include 'quality/_query.html' with q=q show_participant=True %}{% empty %}<p class="text-muted">No queries.</p>{% endfor %}

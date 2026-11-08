@@ -227,7 +227,7 @@ class SectionEditView(RoleRequiredMixin, ParticipantMixin, TemplateView):
         participant.save(update_fields=['updated_at'])
         status = checks.section_status(code, Participant.objects.get(pk=participant.pk).values())
         if status['missing']:
-            messages.warning(request, f'Section {code} saved. {len(status["missing"])} item(s) still missing (red): '
+            messages.warning(request, f'Section {code} saved. {len(status["missing"])} item(s) still missing (yellow): '
                                       'you can come back and complete them later.')
         else:
             messages.success(request, f'Section {code} saved and complete.')
@@ -281,7 +281,7 @@ class FormListView(RoleRequiredMixin, TemplateView):
         show = self.request.GET.get('show', 'all')
         rows = []
         for p in qs:
-            status = checks.section_status(code, p.values())
+            status = next(s for s in checks.record_status(p.values())['sections'] if s['code'] == code)
             if show != 'all' and status['state'] != show:
                 continue
             rows.append({'p': p, 'status': status, 'row': p.section(code)})

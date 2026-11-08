@@ -22,7 +22,7 @@
 <table class="table table-sm table-hover align-middle mb-0">
   <thead><tr>
     <th>Study ID</th><th>Interview</th><th style="min-width:150px">Completeness</th>
-    <th>Sections <span class="small text-muted fw-normal">(green complete · red missing · grey not started)</span></th>
+    <th>Sections <span class="small text-muted fw-normal">(green complete · yellow missing · red errors · grey not started)</span></th>
     <th class="text-end">Missing</th><th class="text-end">Checks</th><th class="text-end">Queries</th>
     <th>Child-Pugh</th><th class="text-end">MELD-Na</th><th>Transplant</th>
   </tr></thead>
@@ -33,9 +33,9 @@
     <td class="small text-nowrap">{{ x.p.interview_date|date:"d M Y" }}</td>
     <td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:8px" role="progressbar" aria-valuenow="{{ x.pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-{{ x.pct|pct_class }}" style="width:{{ x.pct }}%"></div></div><span class="small text-nowrap">{{ x.done }}/{{ x.expected }} · {{ x.pct }}%</span></div></td>
     <td class="text-nowrap">{% for s in x.sections %}<a class="sec-chip {{ s.state }}" href="{% url 'crf:section' x.p.pk s.code %}" title="{{ s.title }}: {{ s.answered }}/{{ s.expected }}{% if s.missing %} · missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}">{{ s.code }}</a>{% endfor %}</td>
-    <td class="text-end">{% if x.missing %}<span class="badge text-bg-danger">{{ x.missing }}</span>{% else %}<span class="text-success">0</span>{% endif %}</td>
-    <td class="text-end small">{% if x.errors %}<span class="badge text-bg-danger" title="errors">{{ x.errors }}</span>{% endif %}{% if x.warnings %} <span class="badge text-bg-warning" title="warnings">{{ x.warnings }}</span>{% endif %}{% if not x.errors and not x.warnings %}0{% endif %}</td>
-    <td class="text-end">{{ x.queries }}</td>
+    <td class="text-end">{% if x.missing %}<span class="badge text-bg-warning">{{ x.missing }}</span>{% else %}<span class="text-success">0</span>{% endif %}</td>
+    <td class="text-end small text-nowrap">{% if x.errors %}<a class="badge text-bg-danger text-decoration-none" href="{% url 'quality:issues' %}?participant={{ x.p.study_id }}&level=error" title="errors">{{ x.errors }}</a>{% endif %}{% if x.warnings %} <a class="badge text-bg-warning text-decoration-none" href="{% url 'quality:issues' %}?participant={{ x.p.study_id }}&level=warning" title="warnings">{{ x.warnings }}</a>{% endif %}{% if not x.errors and not x.warnings %}0{% endif %}</td>
+    <td class="text-end">{% if x.queries %}<a class="badge text-bg-primary text-decoration-none" href="{% url 'quality:queries' %}?participant={{ x.p.study_id }}">{{ x.queries }}</a>{% else %}0{% endif %}</td>
     <td>{{ x.cp_class|default:"—" }}</td>
     <td class="text-end">{{ x.meld_na|default_if_none:"—" }}</td>
     <td>{% if x.lt is None %}<span class="text-muted">—</span>{% elif x.lt %}<span class="badge text-bg-dark">Indicated</span>{% else %}No{% endif %}</td>

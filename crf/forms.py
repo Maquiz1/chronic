@@ -1,3 +1,4 @@
+import datetime
 import re
 from decimal import Decimal
 
@@ -9,6 +10,7 @@ from django.utils.html import format_html
 from accounts.widgets import BootstrapFormMixin, bootstrapify
 
 from . import spec
+from .check_rules import DATE_FLOOR
 from .models import SECTION_COLUMNS, SECTION_MODELS, Participant
 
 RADIO_MAX_OPTIONS = 4
@@ -67,6 +69,11 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
             self.add_error('admission_date', 'Admission date cannot be in the future.')
         if interview and admission and admission > interview:
             self.add_error('admission_date', 'Admission date cannot be after the interview date.')
+        if interview and admission and (interview - admission).days > 365:
+            self.add_error('admission_date', 'Admission date is more than a year before the interview: check the year.')
+        for name in ('interview_date', 'admission_date'):
+            if data.get(name) and data[name] < datetime.date.fromisoformat(DATE_FLOOR):
+                self.add_error(name, f'Date is before {DATE_FLOOR[:4]}: check the year.')
         return data
 
 
@@ -135,9 +142,17 @@ class SectionFormBase(forms.ModelForm):
             unit, hard, _check, _ref = spec.limits(f, values)
             if hard and not Decimal(str(hard[0])) <= Decimal(x) <= Decimal(str(hard[1])):
                 self.add_error(f.name, f'Impossible value. Allowed {hard[0]:g}-{hard[1]:g} {unit}.'.replace(' .', '.'))
-        for name in ('interview_date', 'lab_sample_date', 'outcome_date'):
-            if data.get(name) and data[name] > timezone.localdate():
+        today = timezone.localdate()
+        for name in ('interview_date', 'lab_sample_date', 'discharge_date', 'death_date'):
+            if data.get(name) and data[name] > today:
                 self.add_error(name, 'Date cannot be in the future.')
+        admission = values.get('admission_date')
+        for name, label in (('discharge_date', 'Date of discharge'), ('death_date', 'Date of death')):
+            if name in data and data.get(name) and admission and data[name] < admission:
+                self.add_error(name, f'{label} cannot be before the admission date ({admission:%d %b %Y}).')
+        death = values.get('death_date') if values.get('outcome') == 2 else None
+        if data.get('lab_sample_date') and death and data['lab_sample_date'] > death:
+            self.add_error('lab_sample_date', f'The sample cannot be after the date of death ({death:%d %b %Y}).')
         if data.get('sym_other') is False and data.get('sym_other_specify'):
             data['sym_other_specify'] = ''
         return data
@@ -152,6 +167,12 @@ class SectionFormBase(forms.ModelForm):
                     empty = False if f.type == 'select_multiple' else ('' if f.type == 'text' else None)
                     setattr(obj, column, empty)
                     values[column] = empty
+        # Length of stay left empty: fill it from the admission and discharge/death dates.
+        if self.section.code == 'L' and getattr(obj, 'los_days', None) is None:
+            from .derived import los_from_dates
+            days = los_from_dates({**values, 'admission_date': self.other_values.get('admission_date')})
+            if days is not None and days >= 0:
+                obj.los_days = days
         not_done = []
         for f in self.section.fields:
             if not (f.allow_nd and self.cleaned_data.get(f'nd__{f.name}')):

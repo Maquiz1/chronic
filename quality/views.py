@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect
+from django.urls import reverse
 from django.utils import timezone
 from django.views import View
 from django.views.generic import ListView, TemplateView
@@ -11,6 +12,7 @@ from accounts.roles import user_can
 from crf import spec
 from crf.forms import QueryForm
 from crf.models import Participant
+from crf.check_rules import CATEGORIES
 from crf.views import ENTRY_CODES, participants_with_sections
 
 from . import checks
@@ -79,6 +81,15 @@ class PendingView(RoleRequiredMixin, TemplateView):
                 'sections': [s for s in spec.SECTIONS if s.fields]}
 
 
+def _fix_url(participant, issue):
+    """Where the value behind a check is entered: the section form, or the header page."""
+    if issue.section in ENTRY_CODES:
+        return reverse('crf:section', args=[participant.pk, issue.section])
+    if issue.section == 'Header':
+        return reverse('crf:edit', args=[participant.pk])
+    return reverse('crf:detail', args=[participant.pk])
+
+
 class IssuesView(RoleRequiredMixin, TemplateView):
     """Automatic range and consistency checks across all participants."""
 
@@ -87,16 +98,23 @@ class IssuesView(RoleRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         level = self.request.GET.get('level', '')
+        category = self.request.GET.get('category', '')
+        study_id = self.request.GET.get('participant', '').strip()
         queried = set(DataQuery.objects.exclude(status=DataQuery.Status.CLOSED)
                       .values_list('participant_id', 'field', 'rule'))
+        participants = participants_with_sections()
+        if study_id:
+            participants = participants.filter(study_id=study_id)
         rows = []
-        for p in participants_with_sections():
+        for p in participants:
             for issue in checks.all_issues(p.values()):
-                if level and issue.level != level:
+                if (level and issue.level != level) or (category and issue.category != category):
                     continue
-                rows.append({'p': p, 'issue': issue, 'queried': (p.pk, issue.field, issue.rule) in queried})
+                rows.append({'p': p, 'issue': issue, 'queried': (p.pk, issue.field, issue.rule) in queried,
+                             'section_url': _fix_url(p, issue)})
         rows.sort(key=lambda r: (r['issue'].level != checks.ERROR, r['p'].study_id))
-        return {**super().get_context_data(**kwargs), 'rows': rows, 'level': level}
+        return {**super().get_context_data(**kwargs), 'rows': rows, 'level': level, 'category': category,
+                'participant': study_id, 'categories': CATEGORIES}
 
 
 class QueryListView(RoleRequiredMixin, ListView):
@@ -109,11 +127,15 @@ class QueryListView(RoleRequiredMixin, ListView):
         status = self.request.GET.get('status', 'open')
         if status in DataQuery.Status.values:
             qs = qs.filter(status=status)
+        study_id = self.request.GET.get('participant', '').strip()
+        if study_id:
+            qs = qs.filter(participant__study_id=study_id)
         return qs
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['status'] = self.request.GET.get('status', 'open')
+        ctx['participant'] = self.request.GET.get('participant', '').strip()
         ctx['counts'] = {s: DataQuery.objects.filter(status=s).count() for s in DataQuery.Status.values}
         return ctx
 

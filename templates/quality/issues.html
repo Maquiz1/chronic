@@ -5,22 +5,33 @@
 {% include 'quality/_nav.html' with active='issues' %}
 <div class="d-flex justify-content-between align-items-center mb-2">
   <p class="text-muted small mb-0">Errors: impossible or contradictory values. Warnings: unusual values or answers that differ between sections. Verify against the source document.</p>
+</div>
+<div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+  {% with base='?participant='|add:participant %}
   <div class="btn-group btn-group-sm">
-    <a class="btn btn-outline-secondary {% if not level %}active{% endif %}" href="?">All</a>
-    <a class="btn btn-outline-secondary {% if level == 'error' %}active{% endif %}" href="?level=error">Errors</a>
-    <a class="btn btn-outline-secondary {% if level == 'warning' %}active{% endif %}" href="?level=warning">Warnings</a>
+    <a class="btn btn-outline-secondary {% if not level %}active{% endif %}" href="{{ base }}&category={{ category }}">All levels</a>
+    <a class="btn btn-outline-secondary {% if level == 'error' %}active{% endif %}" href="{{ base }}&level=error&category={{ category }}">Errors</a>
+    <a class="btn btn-outline-secondary {% if level == 'warning' %}active{% endif %}" href="{{ base }}&level=warning&category={{ category }}">Warnings</a>
   </div>
+  <div class="btn-group btn-group-sm">
+    <a class="btn btn-outline-secondary {% if not category %}active{% endif %}" href="{{ base }}&level={{ level }}">All checks</a>
+    {% for c in categories %}<a class="btn btn-outline-secondary {% if category == c %}active{% endif %}" href="{{ base }}&level={{ level }}&category={{ c }}">{{ c }}</a>{% endfor %}
+  </div>
+  {% endwith %}
+  {% if participant %}<span class="badge text-bg-light border">Participant {{ participant }} <a href="?level={{ level }}&category={{ category }}" class="ms-1 text-decoration-none" aria-label="Show all participants">✕</a></span>{% endif %}
+  <span class="small text-muted ms-auto">{{ rows|length }} check{{ rows|length|pluralize }}</span>
 </div>
 <div class="card"><div class="table-responsive">
 <table class="table table-sm mb-0">
-  <thead><tr><th>Study ID</th><th></th><th>Section</th><th>Item</th><th>Problem</th><th></th></tr></thead>
+  <thead><tr><th>Study ID</th><th></th><th>Type</th><th>Section</th><th>Item</th><th>Problem</th><th></th></tr></thead>
   <tbody>
   {% for r in rows %}
   <tr>
     <td><a href="{% url 'crf:detail' r.p.pk %}">{{ r.p.study_id }}</a></td>
     <td><span class="badge text-bg-{% if r.issue.level == 'error' %}danger{% else %}warning{% endif %}">{{ r.issue.level }}</span></td>
-    <td>{{ r.issue.section }}</td><td class="small">{{ r.issue.label }}</td><td class="small">{{ r.issue.message }}</td>
+    <td class="small">{{ r.issue.category }}</td><td>{{ r.issue.section }}</td><td class="small">{{ r.issue.label }}</td><td class="small">{{ r.issue.message }}</td>
     <td class="text-end text-nowrap">
+      <a class="btn btn-sm btn-outline-secondary py-0 me-1" href="{{ r.section_url }}?back={{ request.get_full_path|urlencode }}">Open {% if r.issue.section == 'Header' %}header{% else %}section {{ r.issue.section }}{% endif %}</a>
       {% if r.queried %}<span class="small text-muted">query open</span>
       {% elif can.raise_query %}
       <form method="post" action="{% url 'quality:query_create' r.p.pk %}">{% csrf_token %}
@@ -31,7 +42,7 @@
       </form>{% endif %}
     </td>
   </tr>
-  {% empty %}<tr><td colspan="6" class="text-muted p-3">No problems found.</td></tr>
+  {% empty %}<tr><td colspan="7" class="text-muted p-3">No problems found.</td></tr>
   {% endfor %}
   </tbody>
 </table>

@@ -40,7 +40,7 @@ def build_summary(start=None, end=None):
         states = [next(s for s in st['sections'] if s['code'] == code) for _p, _v, st, _i in items]
         per_section.append({'code': code, 'title': spec.SECTION_BY_CODE[code].title,
                             'complete': sum(1 for s in states if s['state'] == 'complete'),
-                            'incomplete': sum(1 for s in states if s['state'] == 'incomplete'),
+                            'incomplete': sum(1 for s in states if s['state'] in ('incomplete', 'error')),
                             'not_started': sum(1 for s in states if s['state'] == 'not_started')})
         if code == 'G':
             for s in states:
@@ -173,6 +173,7 @@ def progress_data(start=None, end=None):
         missing_items = sum(len(s['missing']) for s in states)
         sections.append({'code': code, 'title': spec.SECTION_BY_CODE[code].title, 'complete': complete,
                          'incomplete': sum(1 for s in states if s['state'] == 'incomplete'),
+                         'error': sum(1 for s in states if s['state'] == 'error'),
                          'not_started': sum(1 for s in states if s['state'] == 'not_started'),
                          'missing_items': missing_items,
                          'pct': round(sum(s['pct'] for s in states) / total) if total else 0})

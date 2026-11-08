@@ -80,6 +80,7 @@ class StudyProgressView(ReportMixin, TemplateView):
                          'titles': [s['title'] for s in data['sections']],
                          'complete': [s['complete'] for s in data['sections']],
                          'incomplete': [s['incomplete'] for s in data['sections']],
+                         'error': [s['error'] for s in data['sections']],
                          'not_started': [s['not_started'] for s in data['sections']]},
             'child_pugh': {'labels': [c for c, _n in data['child_pugh']], 'counts': [n for _c, n in data['child_pugh']]},
             'meld': {'labels': [b for b, _n in data['meld_bins']], 'counts': [n for _b, n in data['meld_bins']]},

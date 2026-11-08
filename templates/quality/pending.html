@@ -9,12 +9,12 @@
     <option value="" {% if not section_filter %}selected{% endif %}>All sections</option>
     {% for s in sections %}<option value="{{ s.code }}" {% if s.code == section_filter %}selected{% endif %}>{{ s.code }}: {{ s.title }}</option>{% endfor %}
   </select>
-  <span class="small text-muted">Unlocked records only. Red: item missing. Outlined: section not started yet.</span>
+  <span class="small text-muted">Unlocked records only. Yellow: item missing. Outlined: section not started yet.</span>
 </form>
 {% for g in groups %}
 <div class="card mb-2"><div class="card-body py-2">
-  <div class="d-flex justify-content-between"><strong>{{ g.section.code }} · {{ g.f.qn }} {{ g.f.label }}</strong><span class="badge text-bg-danger">{{ g.participants|length }} missing</span></div>
-  <div class="mt-1">{% for p, not_started in g.participants %}<a class="badge {% if not_started %}text-bg-light border border-danger text-danger{% else %}text-bg-danger{% endif %} text-decoration-none me-1" href="{% if can.enter_data %}{% url 'crf:section' p.pk g.section.code %}{% else %}{% url 'crf:detail' p.pk %}{% endif %}">{{ p.study_id }}</a>{% endfor %}</div>
+  <div class="d-flex justify-content-between"><strong>{{ g.section.code }} · {{ g.f.qn }} {{ g.f.label }}</strong><span class="badge text-bg-warning">{{ g.participants|length }} missing</span></div>
+  <div class="mt-1">{% for p, not_started in g.participants %}<a class="badge {% if not_started %}text-bg-light border border-warning{% else %}text-bg-warning{% endif %} text-decoration-none me-1" href="{% if can.enter_data %}{% url 'crf:section' p.pk g.section.code %}{% else %}{% url 'crf:detail' p.pk %}{% endif %}">{{ p.study_id }}</a>{% endfor %}</div>
 </div></div>
 {% empty %}<p class="text-muted">Nothing pending in this section.</p>
 {% endfor %}
