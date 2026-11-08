@@ -11,13 +11,15 @@ from . import spec
 from .models import SECTION_COLUMNS, SECTION_MODELS, Participant
 
 RADIO_MAX_OPTIONS = 4
-HOSPITAL_ID_PATTERN = re.compile(r'^[A-Z0-9][A-Z0-9/\-. ]{1,28}[A-Z0-9]$')
+HOSPITAL_ID_PATTERN = re.compile(r'^[AM]\d{2}-\d{2}-\d{2}$')  # e.g. M78-89-12
 
 
 def normalise_hospital_id(value):
-    """Upper case, single spaces, no spaces around - or /, so the same number is always stored the same way."""
-    value = re.sub(r'\s+', ' ', (value or '').strip().upper())
-    return re.sub(r'\s*([-/])\s*', r'\1', value)
+    """A or M then 6 digits, stored as M78-89-12 however it was typed (spaces, dashes, small letters)."""
+    value = re.sub(r'[^A-Z0-9]', '', (value or '').upper())
+    if re.fullmatch(r'[AM]\d{6}', value):
+        return f'{value[0]}{value[1:3]}-{value[3:5]}-{value[5:7]}'
+    return value
 
 
 class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
@@ -26,9 +28,10 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
         fields = ['hospital_id', 'interview_date', 'admission_date', 'phone_number']
         widgets = {'interview_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
                    'admission_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
-                   'hospital_id': forms.TextInput(attrs={'autofocus': True, 'autocomplete': 'off',
+                   'hospital_id': forms.TextInput(attrs={'autofocus': True, 'autocomplete': 'off', 'maxlength': 9,
+                                                         'placeholder': 'M78-89-12', 'data-mrn': '',
                                                          'style': 'text-transform: uppercase'})}
-        help_texts = {'hospital_id': 'Required. The patient\'s MNH medical record number (MRN) from the hospital system. '
+        help_texts = {'hospital_id': 'Required. Starts with A or M, then 6 digits: type M788912 and the dashes are added (M78-89-12). '
                                      'Visible only to Data Clerks, Data Managers and Admins.',
                       'phone_number': 'Optional. Visible only to Data Clerks, Data Managers and Admins.',
                       'admission_date': 'Can be added later.'}
@@ -44,7 +47,7 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
     def clean_hospital_id(self):
         value = normalise_hospital_id(self.cleaned_data.get('hospital_id'))
         if not HOSPITAL_ID_PATTERN.match(value):
-            raise forms.ValidationError('Use 3-30 letters, digits, "-", "/" or "." (as printed in the hospital system).')
+            raise forms.ValidationError('The MRN starts with A or M followed by 6 digits, e.g. M78-89-12.')
         existing = Participant.all_objects.filter(hospital_id=value).exclude(pk=self.instance.pk).first()
         if existing and existing.is_deleted:
             raise forms.ValidationError(

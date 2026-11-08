@@ -170,3 +170,16 @@ input[type=number].form-control { max-width: 12rem; }
 .chart-box.chart-sm { height: 220px; }
 .table a { text-decoration: none; }
 .table a:hover { text-decoration: underline; }
+
+/* Section chips wrap in rows instead of a single column on narrow screens */
+.sec-chips { display: flex; flex-wrap: wrap; gap: 3px; min-width: 9.5rem; max-width: 16rem; }
+.sec-chips .sec-chip { margin-right: 0; }
+.dash-sections td:nth-child(2) { min-width: 8rem; }
+.table > :not(caption) > tr > :last-child { padding-right: .75rem; }
+.table > :not(caption) > tr > :first-child { padding-left: .5rem; }
+@media (max-width: 575.98px) {
+  .content { overflow-x: hidden; }
+  .stat { font-size: 1.5rem; }
+}
+.dash-pct { min-width: 90px; }
+@media (max-width: 575.98px) { .dash-pct { min-width: 0; } .dash-sections td:nth-child(2) { min-width: 0; } }

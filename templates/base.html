@@ -97,10 +97,11 @@
         <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
       </button>
       <span class="topbar-title text-truncate" id="topbar-title">{{ SITE_NAME }}</span>
-      <form method="post" action="{% url 'logout' %}" class="ms-auto d-lg-none">{% csrf_token %}<button class="btn btn-sm btn-outline-secondary">Log out</button></form>
-      <div class="dropdown ms-lg-auto">
+      <div class="dropdown ms-auto">
         <button class="btn btn-sm btn-light dropdown-toggle" data-bs-toggle="dropdown">{{ user.first_name|default:user.email }}</button>
         <ul class="dropdown-menu dropdown-menu-end">
+          <li><div class="dropdown-header"><strong class="text-body">{{ user }}</strong><br>{{ user.email }}<br>{{ user.role_labels }}</div></li>
+          <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">My profile</a></li>
           <li><a class="dropdown-item" href="{% url 'accounts:password_change' %}">Change password</a></li>
           <li><hr class="dropdown-divider"></li>

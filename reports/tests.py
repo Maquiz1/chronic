@@ -25,7 +25,7 @@ class ReportTests(TestCase):
         self.inv = make_user('investigator')
         self.client.force_login(self.clerk)
         old = timezone.localdate() - datetime.timedelta(days=5)
-        self.client.post(reverse('crf:create'), {'hospital_id': 'M9-01', 'interview_date': old})
+        self.client.post(reverse('crf:create'), {'hospital_id': 'M90-00-01', 'interview_date': old})
         self.p = Participant.objects.get()
 
     def test_progress_report_with_pdf(self):
@@ -91,7 +91,7 @@ class ReportPageTests(TestCase):
         self.client.force_login(clerk)
         today = timezone.localdate()
         for i, days in enumerate((1, 10, 40)):
-            c.post(reverse('crf:create'), {'hospital_id': f'RPT-{i}', 'interview_date': today - datetime.timedelta(days=days)})
+            c.post(reverse('crf:create'), {'hospital_id': f'M20-00-{i:02d}', 'interview_date': today - datetime.timedelta(days=days)})
         p = Participant.objects.order_by('study_id').first()
         c.post(reverse('crf:section', args=[p.pk, 'G']), {
             'bilirubin': '72', 'bilirubin_unit': '1', 'albumin': '24', 'albumin_unit': '1', 'inr': '1.9',
@@ -115,6 +115,6 @@ class ReportPageTests(TestCase):
         r = self.client.get(reverse('reports:patients') + '?show=missing&sort=missing')
         self.assertEqual(r.status_code, 200)
         self.assertEqual(len(r.context['rows']), 3)
-        self.assertNotContains(r, 'RPT-0')  # investigators never see hospital IDs
+        self.assertNotContains(r, 'M20-00-0')  # investigators never see hospital IDs
         r = self.client.get(reverse('reports:pdf'))
         self.assertEqual(r.content[:4], b'%PDF')

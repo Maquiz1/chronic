@@ -1,6 +1,9 @@
+import re
+
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
-from django.db.models import Q
+from django.db.models import Q, Value
+from django.db.models.functions import Replace
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
@@ -77,7 +80,9 @@ class ParticipantListView(RoleRequiredMixin, ListView):
             qs = qs.filter(cond)
         mrn = self.request.GET.get('mrn', '').strip()
         if mrn and user_can(self.request.user, 'view_identity'):
-            qs = qs.filter(hospital_id__icontains=mrn)
+            # match with or without the dashes: 788912, 78-89 and M78-89-12 all find M78-89-12
+            qs = qs.annotate(mrn_plain=Replace('hospital_id', Value('-'), Value(''))).filter(
+                mrn_plain__icontains=re.sub(r'[^A-Za-z0-9]', '', mrn))
         if self.request.GET.get('locked') == '1':
             qs = qs.filter(locked=True)
         return qs

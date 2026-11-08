@@ -20,7 +20,7 @@ class ExportTests(TestCase):
         self.dm = make_user('data_manager')
         self.client.force_login(self.dm)
         today = timezone.localdate()
-        self.client.post(reverse('crf:create'), {'hospital_id': 'M1-2-3', 'interview_date': today,
+        self.client.post(reverse('crf:create'), {'hospital_id': 'M01-02-03', 'interview_date': today,
                                                  'admission_date': today - datetime.timedelta(days=1),
                                                  'phone_number': '0712000000'})
         self.p = Participant.objects.get()
@@ -59,7 +59,7 @@ class ExportTests(TestCase):
         rows = list(csv.reader(io.StringIO(r.content.decode('utf-8-sig'))))
         self.assertIn('hospital_id', rows[0])
         self.assertIn('age_years', rows[0])
-        self.assertEqual(rows[1][rows[0].index('hospital_id')], 'M1-2-3')
+        self.assertEqual(rows[1][rows[0].index('hospital_id')], 'M01-02-03')
 
     def test_only_owner_downloads_and_bad_requests(self):
         r = self.client.post(reverse('exports:start'), {'dataset': 'G', 'mode': 'codes', 'format': 'xlsx'})

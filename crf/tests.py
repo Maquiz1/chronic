@@ -190,11 +190,16 @@ class EntryTests(TestCase):
         self.assertContains(r, "is already registered as")
         self.assertContains(r, reverse('crf:detail', args=[self.p.pk]))
         r = self.client.post(reverse('crf:create'), {'hospital_id': '<b>', 'interview_date': today})
-        self.assertContains(r, 'Use 3-30 letters')
+        self.assertContains(r, 'starts with A or M')
+        r = self.client.post(reverse('crf:create'), {'hospital_id': 'B10-20-33', 'interview_date': today})
+        self.assertContains(r, 'starts with A or M')
+        r = self.client.post(reverse('crf:create'), {'hospital_id': 'M10-20-3', 'interview_date': today})
+        self.assertContains(r, 'starts with A or M')
         self.assertEqual(Participant.objects.count(), 1)
-        self.client.post(reverse('crf:create'), {'hospital_id': 'M10-20-31', 'interview_date': today})
+        self.client.post(reverse('crf:create'), {'hospital_id': 'a102031', 'interview_date': today})
         self.assertEqual(Participant.objects.count(), 2)
-        r = self.client.get(reverse('crf:list') + '?mrn=20-31')
+        self.assertEqual(Participant.objects.get(study_id='CLD-0002').hospital_id, 'A10-20-31')
+        r = self.client.get(reverse('crf:list') + '?mrn=2031')  # dashes optional when searching
         self.assertContains(r, 'CLD-0002')
         self.assertNotContains(r, 'CLD-0001')
         self.assertContains(r, '<th>MRN</th>')
@@ -369,7 +374,7 @@ class ScoreTests(TestCase):
     def test_imaging_skip_rule_and_not_done(self):
         today = timezone.localdate()
         self.client.force_login(make_user('data_clerk'))
-        self.client.post(reverse('crf:create'), {'hospital_id': 'IMG-01', 'interview_date': today})
+        self.client.post(reverse('crf:create'), {'hospital_id': 'M11-00-01', 'interview_date': today})
         p = Participant.objects.get()
         url = reverse('crf:section', args=[p.pk, 'G'])
         # No modality ticked: imaging findings are cleared and not expected
@@ -423,7 +428,7 @@ class RoleSplitTests(TestCase):
         today = timezone.localdate()
         rs = make_user('research_scientist')
         self.client.force_login(rs)
-        self.client.post(reverse('crf:create'), {'hospital_id': 'RS-001', 'interview_date': today})
+        self.client.post(reverse('crf:create'), {'hospital_id': 'M11-00-02', 'interview_date': today})
         p = Participant.objects.get()
         self.client.post(reverse('crf:section', args=[p.pk, 'A']), {'age_years': '50'})
         self.assertEqual(SECTION_MODELS['A'].objects.get().age_years, 50)
@@ -446,7 +451,7 @@ class DateTests(TestCase):
         self.client.force_login(make_user('data_clerk'))
         self.today = timezone.localdate()
         self.adm = self.today - datetime.timedelta(days=10)
-        self.client.post(reverse('crf:create'), {'hospital_id': 'DT-001', 'interview_date': self.today - datetime.timedelta(days=8),
+        self.client.post(reverse('crf:create'), {'hospital_id': 'M11-00-03', 'interview_date': self.today - datetime.timedelta(days=8),
                                                  'admission_date': self.adm})
         self.p = Participant.objects.get()
         self.url = reverse('crf:section', args=[self.p.pk, 'L'])
@@ -469,7 +474,7 @@ class DateTests(TestCase):
         self.assertContains(r, 'Saved, but check the dates')
         self.client.post(self.url, {'outcome': '2', 'death_date': self.adm + datetime.timedelta(days=1)})
         self.client.post(reverse('crf:section', args=[self.p.pk, 'G']), {'lab_sample_date': self.adm + datetime.timedelta(days=3)})
-        self.client.post(reverse('crf:edit', args=[self.p.pk]), {'hospital_id': 'DT-001', 'interview_date': '2016-05-01',
+        self.client.post(reverse('crf:edit', args=[self.p.pk]), {'hospital_id': 'M11-00-03', 'interview_date': '2016-05-01',
                                                                'admission_date': '2016-06-01'})
         p = Participant.objects.get()
         self.assertEqual(p.interview_date, datetime.date(2016, 5, 1))

@@ -12,3 +12,17 @@
 </div></div>
 </div></div>
 {% endblock %}
+{% block scripts %}
+<script>
+  // MRN: A or M, then 6 digits; the dashes are added while typing (M78-89-12).
+  document.querySelectorAll('input[data-mrn]').forEach(function (el) {
+    el.addEventListener('input', function () {
+      var raw = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      var letter = /^[AM]/.test(raw) ? raw[0] : '';
+      var digits = raw.slice(letter ? 1 : 0).replace(/\D/g, '').slice(0, 6);
+      var out = letter + digits.replace(/(\d{2})(?=\d)/g, '$1-');
+      if (el.value !== out) el.value = out;
+    });
+  });
+</script>
+{% endblock %}

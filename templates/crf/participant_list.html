@@ -16,18 +16,19 @@
     {% if can.enter_data %}<a class="btn btn-sm btn-primary" href="{% url 'crf:create' %}">+ New participant</a>{% endif %}
   </form>
 </div>
+<p class="small text-muted mb-2">Sections: <span class="sec-chip complete">A</span> complete · <span class="sec-chip incomplete">A</span> items missing · <span class="sec-chip error">A</span> errors · <span class="sec-chip not_started">A</span> not started. Tap a section to open it.</p>
 <div class="card"><div class="table-responsive">
-<table class="table table-sm table-hover mb-0">
-  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>MRN</th>{% endif %}<th>Interview</th><th>Sections <span class="text-muted small">(green complete · yellow items missing · red errors · grey not started)</span></th><th style="min-width:170px">Completed items</th><th class="text-end">Missing</th></tr></thead>
+<table class="table table-sm table-hover align-middle mb-0">
+  <thead><tr><th>Study ID</th>{% if can.view_identity %}<th>MRN</th>{% endif %}<th class="d-none d-md-table-cell">Interview</th><th>Sections</th><th style="min-width:150px">Completed items</th><th class="text-end">Missing</th></tr></thead>
   <tbody>
   {% for p, st in rows %}
   <tr>
-    <td><a href="{% url 'crf:detail' p.pk %}" class="fw-semibold">{{ p.study_id }}</a>{% if p.locked %} <span title="Verified and locked">🔒</span>{% endif %}</td>
+    <td class="text-nowrap"><a href="{% url 'crf:detail' p.pk %}" class="fw-semibold">{{ p.study_id }}</a>{% if p.locked %} <span title="Verified and locked">🔒</span>{% endif %}</td>
     {% if can.view_identity %}<td class="text-nowrap">{% if p.hospital_id %}{{ p.hospital_id }}{% else %}<span class="missing-text">missing</span>{% endif %}</td>{% endif %}
-    <td class="text-nowrap">{{ p.interview_date|date:"d M Y" }}</td>
-    <td>{% for s in st.sections %}{% if s.state != 'calculated' %}<a class="sec-chip {{ s.state }}" href="{% url 'crf:section' p.pk s.code %}" title="{{ s.title }}: {{ s.answered }}/{{ s.expected }}{% if s.missing %} · missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}">{{ s.code }}</a>{% endif %}{% endfor %}</td>
+    <td class="text-nowrap d-none d-md-table-cell">{{ p.interview_date|date:"d M Y" }}</td>
+    <td><div class="sec-chips">{% for s in st.sections %}{% if s.state != 'calculated' %}<a class="sec-chip {{ s.state }}" href="{% url 'crf:section' p.pk s.code %}" title="{{ s.title }}: {{ s.answered }}/{{ s.expected }}{% if s.missing %} · missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}">{{ s.code }}</a>{% endif %}{% endfor %}</div></td>
     <td><div class="d-flex align-items-center gap-2"><div class="progress flex-grow-1" style="height:8px" role="progressbar" aria-valuenow="{{ st.pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-{{ st.pct|pct_class }}" style="width:{{ st.pct }}%"></div></div><span class="small text-nowrap">{{ st.done }}/{{ st.expected }} · <strong>{{ st.pct }}%</strong></span></div></td>
-    <td class="text-end">{% if st.missing_count %}<span class="badge text-bg-warning">{{ st.missing_count }}</span>{% else %}<span class="text-success">0</span>{% endif %}</td>
+    <td class="text-end pe-3">{% if st.missing_count %}<span class="badge text-bg-warning">{{ st.missing_count }}</span>{% else %}<span class="text-success">0</span>{% endif %}</td>
   </tr>
   {% empty %}<tr><td colspan="6" class="text-muted p-3">No participants found.</td></tr>
   {% endfor %}

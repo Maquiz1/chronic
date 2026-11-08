@@ -13,22 +13,22 @@
   <div class="col-6 col-lg"><div class="card"><div class="card-body"><div class="text-muted small">Queries</div><div class="stat">{{ open_queries }}</div><div class="small text-muted">open · {{ answered_queries }} answered, to close</div></div></div></div>
 </div>
 <div class="row g-3">
-  <div class="col-lg-5"><div class="card"><div class="card-body">
+  <div class="col-xl-6"><div class="card"><div class="card-body">
     <h2 class="h6">By section</h2>
-    <table class="table table-sm align-middle mb-0"><thead><tr><th></th><th>Section</th><th class="text-end">Complete</th><th style="min-width:110px">Completeness</th><th class="text-end">Missing items</th></tr></thead><tbody>
-    {% for s in per_section %}<tr><td class="fw-semibold"><a href="{% url 'crf:form_list' s.code %}">{{ s.code }}</a></td><td><a class="text-reset" href="{% url 'crf:form_list' s.code %}">{{ s.title }}</a></td><td class="text-end text-nowrap">{{ s.complete }}/{{ total }}</td>
-      <td><div class="d-flex align-items-center gap-1"><div class="progress flex-grow-1" style="height:6px" role="progressbar" aria-valuenow="{{ s.pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-{{ s.pct|pct_class }}" style="width:{{ s.pct }}%"></div></div><span class="small" style="min-width:2.4rem;text-align:right">{{ s.pct }}%</span></div></td>
-      <td class="text-end">{% if s.missing %}{% if can.view_quality %}<a class="missing-text" href="{% url 'quality:pending' %}?section={{ s.code }}">{{ s.missing }}</a>{% else %}<span class="missing-text">{{ s.missing }}</span>{% endif %}{% else %}<span class="text-success">0</span>{% endif %}</td></tr>{% endfor %}
-    </tbody></table>
+    <div class="table-responsive"><table class="table table-sm align-middle mb-0 dash-sections"><thead><tr><th></th><th>Section</th><th class="text-end d-none d-sm-table-cell">Complete</th><th class="dash-pct text-end text-sm-start"><span class="d-none d-sm-inline">Completeness</span><span class="d-sm-none">Done</span></th><th class="text-end">Missing</th></tr></thead><tbody>
+    {% for s in per_section %}<tr><td class="fw-semibold"><a href="{% url 'crf:form_list' s.code %}">{{ s.code }}</a></td><td><a class="text-reset" href="{% url 'crf:form_list' s.code %}">{{ s.title }}</a></td><td class="text-end text-nowrap d-none d-sm-table-cell">{{ s.complete }}/{{ total }}</td>
+      <td><div class="d-flex align-items-center gap-1"><div class="progress flex-grow-1 d-none d-sm-flex" style="height:6px" role="progressbar" aria-valuenow="{{ s.pct }}" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar bg-{{ s.pct|pct_class }}" style="width:{{ s.pct }}%"></div></div><span class="small text-nowrap ms-auto" style="min-width:2.4rem;text-align:right">{{ s.pct }}%</span></div></td>
+      <td class="text-end pe-2">{% if s.missing %}{% if can.view_quality %}<a class="missing-text" href="{% url 'quality:pending' %}?section={{ s.code }}">{{ s.missing }}</a>{% else %}<span class="missing-text">{{ s.missing }}</span>{% endif %}{% else %}<span class="text-success">0</span>{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>
   </div></div></div>
-  <div class="col-lg-7"><div class="card"><div class="card-body">
+  <div class="col-xl-6"><div class="card"><div class="card-body">
     <h2 class="h6">Recently registered</h2>
-    <table class="table table-sm table-hover mb-0"><thead><tr><th>Study ID</th><th>Interview</th><th>Sections</th><th class="text-end">Complete</th></tr></thead><tbody>
-    {% for p, st in recent %}<tr><td><a href="{% url 'crf:detail' p.pk %}">{{ p.study_id }}</a>{% if p.locked %} 🔒{% endif %}</td><td>{{ p.interview_date|date:"d M Y" }}</td>
-      <td>{% for s in st.sections %}{% if s.state != 'calculated' %}<a class="sec-chip {{ s.state }}" href="{% url 'crf:section' p.pk s.code %}" title="{{ s.title }}: {{ s.answered }}/{{ s.expected }}{% if s.missing %} · missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}">{{ s.code }}</a>{% endif %}{% endfor %}</td>
-      <td class="text-end text-nowrap small">{{ st.done }}/{{ st.expected }} · <strong>{{ st.pct }}%</strong></td></tr>
+    <div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0"><thead><tr><th>Study ID</th><th class="d-none d-sm-table-cell">Interview</th><th>Sections</th><th class="text-end">Complete</th></tr></thead><tbody>
+    {% for p, st in recent %}<tr><td class="text-nowrap"><a href="{% url 'crf:detail' p.pk %}">{{ p.study_id }}</a>{% if p.locked %} 🔒{% endif %}</td><td class="text-nowrap d-none d-sm-table-cell">{{ p.interview_date|date:"d M Y" }}</td>
+      <td><div class="sec-chips">{% for s in st.sections %}{% if s.state != 'calculated' %}<a class="sec-chip {{ s.state }}" href="{% url 'crf:section' p.pk s.code %}" title="{{ s.title }}: {{ s.answered }}/{{ s.expected }}{% if s.missing %} · missing {% for f in s.missing %}{{ f.qn }} {% endfor %}{% endif %}">{{ s.code }}</a>{% endif %}{% endfor %}</div></td>
+      <td class="text-end text-nowrap small pe-2">{{ st.done }}/{{ st.expected }} · <strong>{{ st.pct }}%</strong></td></tr>
     {% empty %}<tr><td colspan="4" class="text-muted">No participants yet.</td></tr>{% endfor %}
-    </tbody></table>
+    </tbody></table></div>
   </div></div></div>
 </div>
 {% endblock %}
