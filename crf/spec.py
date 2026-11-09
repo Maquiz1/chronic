@@ -2,8 +2,8 @@
 
 Source: documentations/tools/questionnaire final_v0.2.docx (v0.1 was questionnaire final.docx) ("Clinical profile, disease severity and need for liver
 transplantation among patients with decompensated chronic liver disease at Muhimbili National Hospital").
-Units and reference limits: documentations/si_units_range (MNH Gastroenterology unit lab sheet and the MNH
-Jeeva clinical chemistry screen).
+Units and reference limits: documentations/si_units_range (units1: MNH Gastroenterology unit lab sheet;
+units2-4: MNH Jeeva clinical chemistry screens; units5-6: MNH Jeeva full blood count screens).
 
 The database tables, the entry forms, skip logic, data quality checks, exports and the Excel data dictionary are
 all generated from this file. When a new CRF version arrives: edit this file and crf/decisions.py, raise VERSION,
@@ -14,7 +14,7 @@ This module must not import Django: the dictionary builder uses it on its own.
 from dataclasses import dataclass, field as dc_field
 
 VERSION = '0.2.1'
-VERSION_DATE = '2026-11-08'
+VERSION_DATE = '2026-11-09'
 STUDY_TITLE = ('Clinical profile, disease severity and need for liver transplantation among patients with '
                'decompensated chronic liver disease at Muhimbili National Hospital')
 CRF_SOURCE = 'questionnaire final_v0.2.docx'
@@ -247,20 +247,22 @@ SECTIONS = [
         Field('lab_result_date', 'Date the laboratory results were reported', 'date', qn='G0a', group=LAB,
               allow_nd=True, status='Added (not on CRF)', decision='D43',
               notes='Saved even if wrong; flagged under Data quality > Dates (future, before the sample date).'),
-        Field('hb', 'Hemoglobin', 'decimal', qn='G1', group=LAB, unit='g/dL', dp=1, hard=(1, 25), check=(4, 20),
-              ref=(12.0, 17.5), allow_nd=True, notes='Reference interval proposed (not on the MNH sheet); confirm with MNH lab.'),
-        Field('platelets', 'Platelet count', 'integer', qn='G2', group=LAB, unit='×10⁹/L (= K/µL)', hard=(1, 2000),
-              check=(10, 1000), ref=(150, 400), allow_nd=True, notes='Reference interval proposed; confirm with MNH lab.'),
-        Field('wbc', 'WBC', 'decimal', qn='G3', group=LAB, unit='×10⁹/L (= K/µL)', dp=1, hard=(0.1, 300), check=(1, 50),
-              ref=(4.0, 11.0), allow_nd=True, status='Changed from CRF', decision='D23', crf_wording='WBC): ______',
-              notes='Unit missing on the CRF; MNH sheet uses K/µL, which is the same as ×10⁹/L.'),
+        Field('hb', 'Hemoglobin', 'decimal', qn='G1', group=LAB, unit='g/dL', dp=3, hard=(1, 25), check=(4, 20),
+              ref=(11.1, 17.5), allow_nd=True,
+              notes='MNH Jeeva full blood count: g/dL, 3 decimals, lower limit 11.1; upper limit proposed.'),
+        Field('platelets', 'Platelet count', 'decimal', qn='G2', group=LAB, unit='×10⁹/L (= K/µL)', dp=2,
+              hard=(1, 2000), check=(10, 1000), ref=(100, 400), allow_nd=True,
+              notes='MNH Jeeva full blood count: K/µL, 2 decimals, lower limit 100; upper limit proposed.'),
+        Field('wbc', 'WBC', 'decimal', qn='G3', group=LAB, unit='×10⁹/L (= K/µL)', dp=3, hard=(0.1, 300), check=(1, 50),
+              ref=(5.0, 11.0), allow_nd=True, status='Changed from CRF', decision='D23', crf_wording='WBC): ______',
+              notes='Unit missing on the CRF. MNH Jeeva full blood count: K/µL (= ×10⁹/L), 3 decimals, lower limit 5; '
+                    'upper limit proposed.'),
         Field('bilirubin', 'Serum total bilirubin', 'decimal', qn='G4', group=LAB, unit='µmol/L', dp=2,
-              hard=(1, 1200), check=(3, 600), ref=(3.4, 20.5), allow_nd=True, decision='D03',
-              notes='Fixed to the MNH lab unit (µmol/L); converted to mg/dL for the scores (÷17.1).'),
+              hard=(1, 1200), check=(3, 600), ref=(5.2, 41), allow_nd=True, decision='D03',
+              notes='MNH Jeeva: µmol/L, 5.2-41. Converted to mg/dL for the scores (÷17.1).'),
         Field('direct_bilirubin', 'Serum direct bilirubin', 'decimal', qn='G5', group=LAB, unit='µmol/L', dp=2,
-              hard=(0, 900), check=(0, 450), ref=(0, 5.1), allow_nd=True, decision='D38',
-              notes='New in v0.2. Fixed to µmol/L. Reference interval proposed; confirm with MNH lab. '
-                    'Cannot exceed total bilirubin.'),
+              hard=(0, 900), check=(0, 450), ref=(0.72, 8.22), allow_nd=True, decision='D38',
+              notes='New in v0.2. MNH Jeeva: µmol/L, 0.72-8.22. Cannot exceed total bilirubin.'),
         Field('albumin', 'Serum albumin', 'decimal', qn='G6', group=LAB, unit='g/L', dp=1, hard=(5, 70),
               check=(10, 55), ref=(35, 50), allow_nd=True, status='Changed from CRF', decision='D03',
               crf_wording='Serum albumin (g/dL)',
@@ -273,12 +275,11 @@ SECTIONS = [
               notes='Fixed to the MNH Jeeva unit (µmol/L, 63.6-110.5); the CRF asks mg/dL. '
                     'Converted to mg/dL for MELD-Na (÷88.4).'),
         Field('sodium', 'Serum sodium', 'decimal', qn='G9', group=LAB, unit='mmol/L (= mEq/L)', dp=1, hard=(90, 190),
-              check=(115, 160), ref=(135, 145), allow_nd=True,
-              notes='MNH sheet labels mEq/L, which equals mmol/L for sodium.'),
+              check=(115, 160), ref=(133.6, 142.5), allow_nd=True,
+              notes='MNH Jeeva: mmol/L, 133.6-142.5. The MNH Gastro sheet labels mEq/L, which equals mmol/L.'),
         Field('potassium', 'Serum potassium', 'decimal', qn='G10', group=LAB, unit='mmol/L (= mEq/L)', dp=2,
-              hard=(1, 10), check=(2.5, 7), ref=(3.5, 5.1), allow_nd=True, decision='D38',
-              notes='New in v0.2; unit missing on the CRF. mEq/L equals mmol/L. Reference interval proposed; '
-                    'confirm with MNH lab.'),
+              hard=(1, 10), check=(2.5, 7), ref=(3.83, 5.52), allow_nd=True, decision='D38',
+              notes='New in v0.2; unit missing on the CRF. MNH Jeeva: mmol/L, 3.83-5.52 (mEq/L equals mmol/L).'),
         Field('chloride', 'Serum chloride', 'decimal', qn='G11', group=LAB, unit='mmol/L (= mEq/L)', dp=1,
               hard=(60, 150), check=(80, 125), ref=(98, 107), allow_nd=True, decision='D38',
               notes='New in v0.2; unit missing on the CRF. Reference interval proposed; confirm with MNH lab.'),

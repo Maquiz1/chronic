@@ -46,13 +46,17 @@ CHANGE_LOG = [
      'bleeding varices on OGD remain. Sections I (Child-Pugh) and J (MELD-Na) removed from the CRF: calculated. '
      'Transplant: Child-Pugh C, MELD-Na, Milan and "meets criteria" removed; calculated, plus a proposed outcome '
      '"transplant indicated" (D37). Decisions D04, D09-D12, D15, D20, D31, D34 answered; D36-D41 new.'),
-    ('0.2.1', '2026-11-08', 'Pre-go-live unit review (no questionnaire change). No unit choice at entry: values are '
+    ('0.2.1', '2026-11-09', 'Pre-go-live unit review (no questionnaire change). No unit choice at entry: values are '
      'entered in the MNH laboratory units: total and direct bilirubin µmol/L, albumin g/L, creatinine µmol/L, BUN '
      'mmol/L (unit columns G4a, G5a, G6a, G8a, G12a removed). Decimals as the MNH lab prints them: ALT, AST, GGT, ALP, '
      'potassium, bilirubins and AFP 2 decimals; sodium and chloride 1 decimal (were whole numbers). Equivalent units '
      'shown: ×10⁹/L (= K/µL), mmol/L (= mEq/L), U/L (= IU/L). Decisions D03 and D38 answered. D39 answered: encephalopathy grade 0 kept, no longer flagged. "Any other cause? Yes/No" (D10) and "Any other '
      'comorbidity? Yes/No" (E6) added; "specify" is now D10a / E6a, asked only when Yes (D42). New dates: laboratory '
-     'results reported (G0a) and imaging (G21a), saved even if wrong and flagged under Data quality > Dates (D43).'),
+     'results reported (G0a) and imaging (G21a), saved even if wrong and flagged under Data quality > Dates (D43). '
+     'MNH Jeeva screens units3-6 (2026-11-09): bilirubin confirmed in µmol/L; reference limits from MNH for total '
+     'bilirubin 5.2-41, direct bilirubin 0.72-8.22, sodium 133.6-142.5, potassium 3.83-5.52, and lower limits for Hb '
+     '11.1, WBC 5, platelets 100. Hb and WBC take 3 decimals, platelets 2 (was whole numbers), as the MNH full blood '
+     'count prints them.'),
 ]
 
 # Issued versions are kept in data_dictionary/ (not in git; mounted read-only into the app on the server) and every
@@ -164,8 +168,8 @@ def build_workbook(section=None):
                     'skip rules. The data entry system, its checks and the exports are generated from the same source '
                     '(crf/spec.py), so this workbook always matches the system.'),
         ('Sources', f'documentations/tools/{spec.CRF_SOURCE} (CRF version {spec.VERSION}); documentations/si_units_range/units1.jpeg (MNH '
-                    'Gastroenterology unit lab sheet: tests and units) and units2.jpeg (MNH Jeeva clinical chemistry '
-                    'screen: units and reference limits). The study proposal was not available.'),
+                    'Gastroenterology unit lab sheet: tests and units), units2-4.jpeg (MNH Jeeva clinical chemistry '
+                    'screens) and units5-6.jpeg (MNH Jeeva full blood count screens): units, decimals and reference limits. The study proposal was not available.'),
         ('What to do', '1. Answer the Decisions sheet in the yellow columns, starting with the High items (red; Medium '
                        'items are yellow, Low green).\n'
                        '2. Check the Reference Ranges sheet with the MNH laboratory (rows marked Proposed).\n'
@@ -241,14 +245,17 @@ def build_workbook(section=None):
     for sec, f in spec.all_fields():
         if f.type not in ('integer', 'decimal') or sec.code != 'G' or section not in (None, 'G'):
             continue
-        source = 'MNH Jeeva (units2.jpeg)' if 'Jeeva' in f.notes else 'Proposed - confirm with MNH lab'
+        if 'upper limit proposed' in f.notes:
+            source = 'Lower limit MNH Jeeva; upper limit proposed - confirm with MNH lab'
+        elif 'Jeeva' in f.notes:
+            source = 'MNH Jeeva'
+        else:
+            source = 'Proposed - confirm with MNH lab'
         configs = f.by_unit.values() if f.by_unit else [{'unit': f.unit, 'hard': f.hard, 'check': f.check, 'ref': f.ref}]
         for cfg in configs:
             src = source
             if f.name == 'creatinine' and cfg['unit'] == 'mg/dL':
                 src = 'MNH Jeeva µmol/L range ÷ 88.4'
-            elif f.name == 'creatinine':
-                src = 'MNH Jeeva (units2.jpeg)'
             rows.append([f.qn, f.label, cfg['unit'], cfg['ref'][0] if cfg['ref'] else '', cfg['ref'][1] if cfg['ref'] else '',
                          _range_text(cfg['check']), _range_text(cfg['hard']), src])
     if rows:

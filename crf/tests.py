@@ -239,10 +239,12 @@ class EntryTests(TestCase):
     def test_lab_values_as_printed_by_mnh(self):
         # Jeeva prints enzymes with 2 decimals; electrolytes may have 1
         r = self.client.post(self.section_url('G'), {'alt': '33.69', 'ast': '137.37', 'alp': '156.03', 'ggt': '79.80',
-                                                     'sodium': '134.5', 'potassium': '4.25', 'chloride': '101.2'})
+                                                     'sodium': '134.5', 'potassium': '4.25', 'chloride': '101.2',
+                                                     'hb': '4.404', 'wbc': '1.353', 'platelets': '37.90'})
         self.assertEqual(r.status_code, 302)
         g = SECTION_MODELS['G'].objects.get()
         self.assertEqual((g.alt, g.sodium, g.potassium), (Decimal('33.69'), Decimal('134.5'), Decimal('4.25')))
+        self.assertEqual((g.hb, g.wbc, g.platelets), (Decimal('4.404'), Decimal('1.353'), Decimal('37.90')))
 
     def test_other_comorbidity_yes_no(self):
         self.client.post(self.section_url('E'), {'other_comorbidity': '0', 'other_comorbidity_specify': 'Asthma'})
