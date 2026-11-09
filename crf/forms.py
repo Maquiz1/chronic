@@ -22,6 +22,19 @@ def normalise_hospital_id(value):
     return value
 
 
+PHONE_PATTERN = re.compile(r'^0\d{3}-\d{3}-\d{3}$')  # e.g. 0712-345-678
+
+
+def normalise_phone(value):
+    """Tanzanian number stored as 0XXX-XXX-XXX; +255 / 255 numbers are converted to the 0 form."""
+    digits = re.sub(r'\D', '', value or '')
+    if digits.startswith('255') and len(digits) == 12:
+        digits = '0' + digits[3:]
+    if re.fullmatch(r'0\d{9}', digits):
+        return f'{digits[:4]}-{digits[4:7]}-{digits[7:]}'
+    return (value or '').strip()
+
+
 class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
         model = Participant
@@ -29,12 +42,15 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
         widgets = {'interview_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
                    'admission_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
                    'hospital_id': forms.TextInput(attrs={'autofocus': True, 'autocomplete': 'off', 'maxlength': 9,
-                                                         'placeholder': 'M78-89-12', 'data-mrn': '',
-                                                         'style': 'text-transform: uppercase'})}
-        help_texts = {'hospital_id': 'Required. The MR Number (not the IP Number): A or M, then 6 digits. Type M788912 and the dashes '
-                                     'are added (M78-89-12). '
+                                                         'placeholder': 'MXX-XX-XX or AXX-XX-XX', 'data-mrn': '',
+                                                         'style': 'text-transform: uppercase'}),
+                   'phone_number': forms.TextInput(attrs={'autocomplete': 'off', 'maxlength': 16, 'inputmode': 'tel',
+                                                          'placeholder': '0XXX-XXX-XXX', 'data-phone': ''})}
+        help_texts = {'hospital_id': 'Required. The MR Number (not the IP Number): MXX-XX-XX or AXX-XX-XX. Type M788912 and the '
+                                     'dashes are added (M78-89-12). '
                                      'Visible only to Data Clerks, Data Managers and Admins.',
-                      'phone_number': 'Optional. Visible only to Data Clerks, Data Managers and Admins.',
+                      'phone_number': 'Optional. Format 0XXX-XXX-XXX: type 0712345678 and the dashes are added '
+                                      '(+255 numbers are converted). Visible only to Data Clerks, Data Managers and Admins.',
                       'admission_date': 'Can be added later.'}
         error_messages = {'hospital_id': {'unique': 'This MRN is already registered.'}}
 
@@ -44,6 +60,16 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
         if not show_identity:
             del self.fields['phone_number']
             del self.fields['hospital_id']
+
+    def clean_phone_number(self):
+        raw = self.cleaned_data.get('phone_number') or ''
+        if not raw.strip():
+            return ''
+        value = normalise_phone(raw)
+        if not PHONE_PATTERN.match(value):
+            raise forms.ValidationError('The phone number is 0 followed by 9 digits, e.g. 0712-345-678 '
+                                        '(or +255 followed by 9 digits).')
+        return value
 
     def clean_hospital_id(self):
         raw = self.cleaned_data.get('hospital_id') or ''

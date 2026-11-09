@@ -24,5 +24,15 @@
       if (el.value !== out) el.value = out;
     });
   });
+  // Phone: 0XXX-XXX-XXX; dashes added while typing, +255 7.. becomes 07..
+  document.querySelectorAll('input[data-phone]').forEach(function (el) {
+    el.addEventListener('input', function () {
+      var d = el.value.replace(/\D/g, '');
+      if (d.indexOf('255') === 0 && d.length > 3) d = '0' + d.slice(3);
+      d = d.slice(0, 10);
+      var out = d.slice(0, 4) + (d.length > 4 ? '-' + d.slice(4, 7) : '') + (d.length > 7 ? '-' + d.slice(7) : '');
+      if (el.value !== out) el.value = out;
+    });
+  });
 </script>
 {% endblock %}

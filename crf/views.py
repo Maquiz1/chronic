@@ -75,14 +75,18 @@ class ParticipantListView(RoleRequiredMixin, ListView):
         q = self.request.GET.get('q', '').strip()
         if q:
             cond = Q(study_id__icontains=q)
-            if user_can(self.request.user, 'view_identity'):
-                cond |= Q(phone_number__icontains=q) | Q(hospital_id__icontains=q)
+            plain = re.sub(r'[^A-Za-z0-9]', '', q)
+            if plain and user_can(self.request.user, 'view_identity'):
+                # phone and MRN match with or without the dashes
+                qs = qs.annotate(phone_plain=Replace('phone_number', Value('-'), Value('')),
+                                 mrn_plain=Replace('hospital_id', Value('-'), Value('')))
+                cond |= Q(phone_plain__icontains=plain) | Q(mrn_plain__icontains=plain)
             qs = qs.filter(cond)
         mrn = self.request.GET.get('mrn', '').strip()
         if mrn and user_can(self.request.user, 'view_identity'):
             # match with or without the dashes: 788912, 78-89 and M78-89-12 all find M78-89-12
-            qs = qs.annotate(mrn_plain=Replace('hospital_id', Value('-'), Value(''))).filter(
-                mrn_plain__icontains=re.sub(r'[^A-Za-z0-9]', '', mrn))
+            qs = qs.annotate(mrn_only=Replace('hospital_id', Value('-'), Value(''))).filter(
+                mrn_only__icontains=re.sub(r'[^A-Za-z0-9]', '', mrn))
         if self.request.GET.get('locked') == '1':
             qs = qs.filter(locked=True)
         return qs

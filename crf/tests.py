@@ -177,6 +177,7 @@ class EntryTests(TestCase):
         self.p = Participant.objects.get()
         self.assertEqual(self.p.study_id, 'CLD-0001')
         self.assertEqual(self.p.hospital_id, 'M10-20-30')  # stored in capitals
+        self.assertEqual(self.p.phone_number, '0712-000-000')  # dashes added
         self.assertRedirects(r, reverse('crf:section', args=[self.p.pk, 'A']))
 
     def section_url(self, code):
@@ -255,6 +256,17 @@ class EntryTests(TestCase):
         self.client.post(self.section_url('E'), {'other_comorbidity': '1'})
         missing = [f.name for f in checks.section_status('E', Participant.objects.get(pk=self.p.pk).values())['missing']]
         self.assertIn('other_comorbidity_specify', missing)  # Yes: specify becomes expected
+
+    def test_phone_format(self):
+        today = timezone.localdate()
+        r = self.client.post(reverse('crf:create'), {'hospital_id': 'M10-20-31', 'interview_date': today,
+                                                     'phone_number': '71234'})
+        self.assertContains(r, '0 followed by 9 digits')
+        self.client.post(reverse('crf:create'), {'hospital_id': 'M10-20-31', 'interview_date': today,
+                                                 'phone_number': '+255 754 123 456'})
+        self.assertEqual(Participant.objects.get(hospital_id='M10-20-31').phone_number, '0754-123-456')
+        r = self.client.get(reverse('crf:list') + '?q=0754123456')
+        self.assertContains(r, Participant.objects.get(hospital_id='M10-20-31').study_id)
 
     def test_other_cause_yes_no(self):
         self.client.post(self.section_url('D'), {'other_cause': '0', 'other_cause_specify': 'Schistosomiasis'})
