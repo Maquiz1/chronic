@@ -46,7 +46,7 @@ CHANGE_LOG = [
      'bleeding varices on OGD remain. Sections I (Child-Pugh) and J (MELD-Na) removed from the CRF: calculated. '
      'Transplant: Child-Pugh C, MELD-Na, Milan and "meets criteria" removed; calculated, plus a proposed outcome '
      '"transplant indicated" (D37). Decisions D04, D09-D12, D15, D20, D31, D34 answered; D36-D41 new.'),
-    ('0.2.1', '2026-11-09', 'Pre-go-live unit review (no questionnaire change). No unit choice at entry: values are '
+    ('0.3', '2026-11-09', 'Go-live version, from the pre-go-live review and the investigator answers (questionnaire still v0.2). No unit choice at entry: values are '
      'entered in the MNH laboratory units: total and direct bilirubin µmol/L, albumin g/L, creatinine µmol/L, BUN '
      'mmol/L (unit columns G4a, G5a, G6a, G8a, G12a removed). Decimals as the MNH lab prints them: ALT, AST, GGT, ALP, '
      'potassium, bilirubins and AFP 2 decimals; sodium and chloride 1 decimal (were whole numbers). Equivalent units '
@@ -167,7 +167,7 @@ def build_workbook(section=None):
         ('Purpose', 'Lists every variable on the questionnaire with its code, label, type, codes, units, limits and '
                     'skip rules. The data entry system, its checks and the exports are generated from the same source '
                     '(crf/spec.py), so this workbook always matches the system.'),
-        ('Sources', f'documentations/tools/{spec.CRF_SOURCE} (CRF version {spec.VERSION}); documentations/si_units_range/units1.jpeg (MNH '
+        ('Sources', f'documentations/tools/{spec.CRF_SOURCE} (questionnaire v0.2); documentations/si_units_range/units1.jpeg (MNH '
                     'Gastroenterology unit lab sheet: tests and units), units2-4.jpeg (MNH Jeeva clinical chemistry '
                     'screens) and units5-6.jpeg (MNH Jeeva full blood count screens): units, decimals and reference limits. The study proposal was not available.'),
         ('What to do', '1. Answer the Decisions sheet in the yellow columns, starting with the High items (red; Medium '

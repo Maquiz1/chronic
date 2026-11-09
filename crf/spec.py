@@ -13,7 +13,7 @@ This module must not import Django: the dictionary builder uses it on its own.
 """
 from dataclasses import dataclass, field as dc_field
 
-VERSION = '0.2.1'
+VERSION = '0.3'
 VERSION_DATE = '2026-11-09'
 STUDY_TITLE = ('Clinical profile, disease severity and need for liver transplantation among patients with '
                'decompensated chronic liver disease at Muhimbili National Hospital')
