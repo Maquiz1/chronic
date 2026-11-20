@@ -548,6 +548,19 @@ class DateTests(TestCase):
         self.assertContains(r, 'Laboratory sample is after the date of death')
         self.assertContains(r, 'Admission date is after the interview date')
 
+    def test_future_discharge_or_death_refused(self):
+        tomorrow = self.today + datetime.timedelta(days=1)
+        r = self.client.post(self.url, {'outcome': '1', 'discharge_date': tomorrow})
+        self.assertContains(r, 'Date of discharge cannot be in the future.')
+        r = self.client.post(self.url, {'outcome': '2', 'death_date': tomorrow})
+        self.assertContains(r, 'Date of death cannot be in the future.')
+        self.assertFalse(SECTION_MODELS['L'].objects.exists())
+        self.assertContains(self.client.get(self.url), f'max="{self.today:%Y-%m-%d}"')
+        # A hidden (not asked) future date does not block the save; it is cleared
+        self.client.post(self.url, {'outcome': '2', 'death_date': self.today, 'discharge_date': tomorrow})
+        row = SECTION_MODELS['L'].objects.get()
+        self.assertEqual((row.death_date, row.discharge_date), (self.today, None))
+
     def test_future_interview_or_admission_refused(self):
         tomorrow = timezone.localdate() + datetime.timedelta(days=1)
         r = self.client.post(reverse('crf:edit', args=[self.p.pk]), {'hospital_id': 'M11-00-03',

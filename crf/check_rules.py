@@ -3,7 +3,7 @@ checks page (filter by category) and the "Data Checks" sheet of the data diction
 
 (rule id, level, category, section, rule)
 level: error = impossible or contradictory; warning = unusual, verify against the source.
-"Blocked" rules (impossible numbers, a future date of interview or admission) are refused at entry; the others,
+"Blocked" rules (impossible numbers, a future date of interview, admission, discharge or death) are refused at entry; the others,
 including the other date checks, are saved and flagged afterwards so that a query can be raised.
 """
 
@@ -28,7 +28,7 @@ RULES = [
     ('img_early', 'warning', 'Dates', 'G', 'Imaging more than 30 days before admission.'),
     ('img_after_death', 'error', 'Dates', 'G', 'Imaging after the date of death.'),
     ('img_after_discharge', 'warning', 'Dates', 'G', 'Imaging after the date of discharge.'),
-    ('out_future', 'error', 'Dates', 'L', 'Date of discharge or death is in the future.'),
+    ('out_future', 'error', 'Dates', 'L', 'Date of discharge or death is in the future (blocked at entry).'),
     ('out_before_adm', 'error', 'Dates', 'L', 'Date of discharge or death is before the admission date.'),
     ('disch_before_int', 'warning', 'Dates', 'L', 'Discharged before the interview date (interviewed after discharge?).'),
     ('death_before_int', 'warning', 'Dates', 'L', 'Date of death is before the interview date (information from relatives?).'),

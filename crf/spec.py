@@ -64,6 +64,7 @@ class Field:
     relevant: list = dc_field(default_factory=list)  # all must hold: (field, op, value); op ==, !=, in, filled, any
     expected: bool = True         # counts toward completeness when relevant
     allow_nd: bool = False        # can be ticked "Not done / not available"
+    no_future: bool = False       # date: a future date is refused at entry (other date checks only flag)
     help: str = ''
     crf_wording: str = ''         # as printed, when the dictionary changed it
     status: str = 'Ready'         # Ready | Changed from CRF | Added (not on CRF) | Code proposed
@@ -346,11 +347,11 @@ SECTIONS = [
               notes='Filled in automatically from the admission and discharge/death dates when left empty.'),
         Field('outcome', 'Outcome', 'select_one', qn='L2', choices='outcome', status='Code proposed'),
         Field('discharge_date', 'Date of discharge', 'date', qn='L3a', relevant=[('outcome', '==', 1)],
-              status='Added (not on CRF)', decision='D21',
-              notes='Asked when L2 = Discharged alive. Cannot be before admission or in the future.'),
+              no_future=True, status='Added (not on CRF)', decision='D21',
+              notes='Asked when L2 = Discharged alive. A future date is refused at entry; before admission is flagged.'),
         Field('death_date', 'Date of death', 'date', qn='L3b', relevant=[('outcome', '==', 2)],
-              status='Added (not on CRF)', decision='D21',
-              notes='Asked when L2 = Died. Cannot be before admission or in the future.'),
+              no_future=True, status='Added (not on CRF)', decision='D21',
+              notes='Asked when L2 = Died. A future date is refused at entry; before admission is flagged.'),
     ]),
 ]
 

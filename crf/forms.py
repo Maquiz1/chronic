@@ -138,6 +138,8 @@ class SectionFormBase(forms.ModelForm):
                     field.choices = spec.CHOICES[f.choices]
                 if f.default is not None and getattr(self.instance, f.name, None) is None:
                     self.initial[f.name] = f.default
+            if f.no_future and f.name in self.fields:
+                self.fields[f.name].widget.attrs['max'] = timezone.localdate().isoformat()
             if f.allow_nd:
                 self.fields[f'nd__{f.name}'] = forms.BooleanField(
                     required=False, initial=f.name in not_done, label='Not done / not available')
@@ -167,6 +169,9 @@ class SectionFormBase(forms.ModelForm):
             if f.type == 'select_multiple':
                 continue
             x = data.get(f.name)
+            if f.no_future and x and x > timezone.localdate() and spec.is_relevant(f, values):
+                self.add_error(f.name, f'{f.label} cannot be in the future.')
+                continue
             if x in (None, '') or f.type not in ('integer', 'decimal'):
                 continue
             if f.by_unit and data.get(f.unit_field) not in f.by_unit:
@@ -175,7 +180,7 @@ class SectionFormBase(forms.ModelForm):
             unit, hard, _check, _ref = spec.limits(f, values)
             if hard and not Decimal(str(hard[0])) <= Decimal(x) <= Decimal(str(hard[1])):
                 self.add_error(f.name, f'Impossible value. Allowed {hard[0]:g}-{hard[1]:g} {unit}.'.replace(' .', '.'))
-        # Dates are not refused here: odd or impossible dates are saved and flagged in Data quality > Dates,
+        # Other dates are not refused here: odd or impossible dates are saved and flagged in Data quality > Dates,
         # where a Data Manager can raise a query (quality/checks.py).
         if data.get('sym_other') is False and data.get('sym_other_specify'):
             data['sym_other_specify'] = ''
