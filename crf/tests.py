@@ -289,12 +289,19 @@ class EntryTests(TestCase):
         today = timezone.localdate()
         r = self.client.post(self.section_url('G'), {
             'lab_sample_date': today, 'lab_result_date': today - datetime.timedelta(days=2),
-            'img_modality_us': 'on', 'imaging_date': today + datetime.timedelta(days=3)}, follow=True)
+            'img_modality_us': 'on', 'imaging_date': today - datetime.timedelta(days=40)}, follow=True)
         g = SECTION_MODELS['G'].objects.get()
-        self.assertEqual(g.imaging_date, today + datetime.timedelta(days=3))  # saved, not refused
+        self.assertEqual(g.imaging_date, today - datetime.timedelta(days=40))  # saved, not refused
         self.assertContains(r, 'Saved, but check the dates')
         rules = {i.rule for i in checks.all_issues(Participant.objects.get(pk=self.p.pk).values())}
-        self.assertTrue({'result_before_sample', 'img_future'} <= rules)
+        self.assertTrue({'result_before_sample', 'img_early'} <= rules)
+        # Future dates are refused
+        tomorrow = today + datetime.timedelta(days=1)
+        r = self.client.post(self.section_url('G'), {'lab_sample_date': tomorrow, 'lab_result_date': tomorrow,
+                                                     'img_modality_us': 'on', 'imaging_date': tomorrow})
+        for label in ('Date of the laboratory sample', 'Date the laboratory results were reported', 'Date of the imaging'):
+            self.assertContains(r, f'{label} cannot be in the future.')
+        self.assertEqual(SECTION_MODELS['G'].objects.get().lab_sample_date, today)
         # No imaging modality: the imaging date is not asked and is cleared
         self.client.post(self.section_url('G'), {'nd__img_modality': 'on', 'imaging_date': today})
         self.assertIsNone(SECTION_MODELS['G'].objects.get().imaging_date)

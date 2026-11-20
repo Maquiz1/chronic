@@ -3,7 +3,7 @@ checks page (filter by category) and the "Data Checks" sheet of the data diction
 
 (rule id, level, category, section, rule)
 level: error = impossible or contradictory; warning = unusual, verify against the source.
-"Blocked" rules (impossible numbers, a future date of interview, admission, discharge or death) are refused at entry; the others,
+"Blocked" rules (impossible numbers, any study date in the future) are refused at entry; the others,
 including the other date checks, are saved and flagged afterwards so that a query can be raised.
 """
 
@@ -17,14 +17,14 @@ RULES = [
     ('adm_missing', 'warning', 'Dates', 'Header', 'Admission date is missing (needed for length of stay and lab timing).'),
     ('adm_after_int', 'error', 'Dates', 'Header', 'Admission date is after the interview date.'),
     ('int_late', 'warning', 'Dates', 'Header', 'Interview more than 60 days after admission.'),
-    ('lab_future', 'error', 'Dates', 'G', 'Laboratory sample date is in the future.'),
+    ('lab_future', 'error', 'Dates', 'G', 'Laboratory sample date is in the future (blocked at entry).'),
     ('lab_early', 'warning', 'Dates', 'G', 'Laboratory sample more than 7 days before admission.'),
     ('lab_after_death', 'error', 'Dates', 'G', 'Laboratory sample after the date of death.'),
     ('lab_after_discharge', 'warning', 'Dates', 'G', 'Laboratory sample after the date of discharge.'),
-    ('result_future', 'error', 'Dates', 'G', 'Laboratory result date is in the future.'),
+    ('result_future', 'error', 'Dates', 'G', 'Laboratory result date is in the future (blocked at entry).'),
     ('result_before_sample', 'error', 'Dates', 'G', 'Laboratory result date is before the sample date.'),
     ('result_late', 'warning', 'Dates', 'G', 'Laboratory results reported more than 30 days after the sample.'),
-    ('img_future', 'error', 'Dates', 'G', 'Imaging date is in the future.'),
+    ('img_future', 'error', 'Dates', 'G', 'Imaging date is in the future (blocked at entry).'),
     ('img_early', 'warning', 'Dates', 'G', 'Imaging more than 30 days before admission.'),
     ('img_after_death', 'error', 'Dates', 'G', 'Imaging after the date of death.'),
     ('img_after_discharge', 'warning', 'Dates', 'G', 'Imaging after the date of discharge.'),

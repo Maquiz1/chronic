@@ -243,11 +243,13 @@ SECTIONS = [
     ]),
     Section('G', 'investigations', 'Investigations', [
         Field('lab_sample_date', 'Date of the laboratory sample', 'date', qn='G0', group=LAB, allow_nd=True,
-              status='Added (not on CRF)', decision='D32',
-              notes='Which result to record (first after admission is proposed) is decision D32.'),
+              no_future=True, status='Added (not on CRF)', decision='D32',
+              notes='Which result to record (first after admission is proposed) is decision D32. A future date is '
+                    'refused at entry.'),
         Field('lab_result_date', 'Date the laboratory results were reported', 'date', qn='G0a', group=LAB,
-              allow_nd=True, status='Added (not on CRF)', decision='D43',
-              notes='Saved even if wrong; flagged under Data quality > Dates (future, before the sample date).'),
+              allow_nd=True, no_future=True, status='Added (not on CRF)', decision='D43',
+              notes='A future date is refused at entry; before the sample date is saved and flagged under Data '
+                    'quality > Dates.'),
         Field('hb', 'Hemoglobin', 'decimal', qn='G1', group=LAB, unit='g/dL', dp=3, hard=(1, 25), check=(4, 20),
               ref=(11.1, 17.5), allow_nd=True,
               notes='MNH Jeeva full blood count: g/dL, 3 decimals, lower limit 11.1; upper limit proposed.'),
@@ -307,9 +309,9 @@ SECTIONS = [
               notes='Tick both if both were done. The imaging questions below apply once one is ticked; tick "Not '
                     'done" when no imaging is available.'),
         Field('imaging_date', 'Date of the imaging', 'date', qn='G21a', group=RAD, relevant=IMAGING_DONE,
-              allow_nd=True, status='Added (not on CRF)', decision='D43',
-              notes='Saved even if wrong; flagged under Data quality > Dates (future, long before admission, '
-                    'after death or discharge).'),
+              allow_nd=True, no_future=True, status='Added (not on CRF)', decision='D43',
+              notes='A future date is refused at entry; long before admission, after death or after discharge is '
+                    'saved and flagged under Data quality > Dates.'),
         YN('img_cirrhotic', 'Cirrhotic liver', 'G22', group=RAD, relevant=IMAGING_DONE),
         YN('img_ascites', 'Ascites', 'G23', group=RAD, relevant=IMAGING_DONE),
         YN('img_splenomegaly', 'Splenomegaly', 'G24', group=RAD, relevant=IMAGING_DONE),
