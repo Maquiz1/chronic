@@ -191,11 +191,11 @@ class EntryTests(TestCase):
         self.assertContains(r, "is already registered as")
         self.assertContains(r, reverse('crf:detail', args=[self.p.pk]))
         r = self.client.post(reverse('crf:create'), {'hospital_id': '<b>', 'interview_date': today})
-        self.assertContains(r, 'starts with A or M')
+        self.assertContains(r, 'starts with A, G, M, N or O')
         r = self.client.post(reverse('crf:create'), {'hospital_id': 'B10-20-33', 'interview_date': today})
-        self.assertContains(r, 'starts with A or M')
+        self.assertContains(r, 'starts with A, G, M, N or O')
         r = self.client.post(reverse('crf:create'), {'hospital_id': 'M10-20-3', 'interview_date': today})
-        self.assertContains(r, 'starts with A or M')
+        self.assertContains(r, 'starts with A, G, M, N or O')
         r = self.client.post(reverse('crf:create'), {'hospital_id': 'M71-35-77/4', 'interview_date': today})
         self.assertContains(r, 'looks like the IP Number')
         self.assertEqual(Participant.objects.count(), 1)
@@ -256,6 +256,16 @@ class EntryTests(TestCase):
         self.client.post(self.section_url('E'), {'other_comorbidity': '1'})
         missing = [f.name for f in checks.section_status('E', Participant.objects.get(pk=self.p.pk).values())['missing']]
         self.assertIn('other_comorbidity_specify', missing)  # Yes: specify becomes expected
+
+    def test_mrn_letters_and_empty_interview_date(self):
+        today = timezone.localdate()
+        for i, letter in enumerate('GNO'):
+            self.client.post(reverse('crf:create'), {'hospital_id': f'{letter.lower()}5500{i}1', 'interview_date': today})
+            self.assertTrue(Participant.objects.filter(hospital_id=f'{letter}55-00-{i}1').exists())
+        r = self.client.get(reverse('crf:create'))
+        self.assertNotContains(r, f'value="{today:%Y-%m-%d}"')  # typed from the paper form, not pre-filled
+        r = self.client.post(reverse('crf:create'), {'hospital_id': 'M55-00-99'})
+        self.assertContains(r, 'This field is required')
 
     def test_phone_format(self):
         today = timezone.localdate()

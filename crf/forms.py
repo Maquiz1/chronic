@@ -11,13 +11,13 @@ from . import spec
 from .models import SECTION_COLUMNS, SECTION_MODELS, Participant
 
 RADIO_MAX_OPTIONS = 4
-HOSPITAL_ID_PATTERN = re.compile(r'^[AM]\d{2}-\d{2}-\d{2}$')  # e.g. M78-89-12
+HOSPITAL_ID_PATTERN = re.compile(r'^[AGMNO]\d{2}-\d{2}-\d{2}$')  # e.g. M78-89-12
 
 
 def normalise_hospital_id(value):
-    """A or M then 6 digits, stored as M78-89-12 however it was typed (spaces, dashes, small letters)."""
+    """A, G, M, N or O then 6 digits, stored as M78-89-12 however it was typed (spaces, dashes, small letters)."""
     value = re.sub(r'[^A-Z0-9]', '', (value or '').upper())
-    if re.fullmatch(r'[AM]\d{6}', value):
+    if re.fullmatch(r'[AGMNO]\d{6}', value):
         return f'{value[0]}{value[1:3]}-{value[3:5]}-{value[5:7]}'
     return value
 
@@ -42,15 +42,16 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
         widgets = {'interview_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
                    'admission_date': forms.DateInput(attrs={'type': 'date'}, format='%Y-%m-%d'),
                    'hospital_id': forms.TextInput(attrs={'autofocus': True, 'autocomplete': 'off', 'maxlength': 9,
-                                                         'placeholder': 'MXX-XX-XX or AXX-XX-XX', 'data-mrn': '',
+                                                         'placeholder': 'MXX-XX-XX (first letter A, G, M, N or O)', 'data-mrn': '',
                                                          'style': 'text-transform: uppercase'}),
                    'phone_number': forms.TextInput(attrs={'autocomplete': 'off', 'maxlength': 16, 'inputmode': 'tel',
                                                           'placeholder': '0XXX-XXX-XXX', 'data-phone': ''})}
-        help_texts = {'hospital_id': 'Required. The MR Number (not the IP Number): MXX-XX-XX or AXX-XX-XX. Type M788912 and the '
+        help_texts = {'hospital_id': 'Required. The MR Number (not the IP Number): A, G, M, N or O, then 6 digits. Type M788912 and the '
                                      'dashes are added (M78-89-12). '
                                      'Visible only to Data Clerks, Data Managers and Admins.',
                       'phone_number': 'Optional. Format 0XXX-XXX-XXX: type 0712345678 and the dashes are added '
                                       '(+255 numbers are converted). Visible only to Data Clerks, Data Managers and Admins.',
+                      'interview_date': 'Required. Type the date written on the paper questionnaire.',
                       'admission_date': 'Can be added later.'}
         error_messages = {'hospital_id': {'unique': 'This MRN is already registered.'}}
 
@@ -78,7 +79,7 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
                                         'admission part, e.g. M78-89-12.')
         value = normalise_hospital_id(raw)
         if not HOSPITAL_ID_PATTERN.match(value):
-            raise forms.ValidationError('The MR Number starts with A or M followed by 6 digits, e.g. M78-89-12 '
+            raise forms.ValidationError('The MR Number starts with A, G, M, N or O followed by 6 digits, e.g. M78-89-12 '
                                         '(not the IP Number).')
         existing = Participant.all_objects.filter(hospital_id=value).exclude(pk=self.instance.pk).first()
         if existing and existing.is_deleted:

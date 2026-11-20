@@ -109,8 +109,6 @@ class ParticipantCreateView(RoleRequiredMixin, CreateView):
     form_class = ParticipantForm
     template_name = 'crf/participant_form.html'
 
-    def get_initial(self):
-        return {'interview_date': timezone.localdate()}
 
     def form_valid(self, form):
         form.instance.interviewer = self.request.user
