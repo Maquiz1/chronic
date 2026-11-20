@@ -3,15 +3,15 @@ checks page (filter by category) and the "Data Checks" sheet of the data diction
 
 (rule id, level, category, section, rule)
 level: error = impossible or contradictory; warning = unusual, verify against the source.
-"Blocked" rules (impossible numbers, missing units) are refused at entry; the others, including every date check,
-are saved and flagged afterwards so that a query can be raised.
+"Blocked" rules (impossible numbers, a future date of interview or admission) are refused at entry; the others,
+including the other date checks, are saved and flagged afterwards so that a query can be raised.
 """
 
 DATE_FLOOR = '2020-01-01'  # any study date before this is treated as a mistyped year
 
 RULES = [
     # --- Dates --------------------------------------------------------------------------------------------------
-    ('date_future', 'error', 'Dates', 'Header', 'Date of interview or admission is in the future.'),
+    ('date_future', 'error', 'Dates', 'Header', 'Date of interview or admission is in the future (blocked at entry).'),
     ('date_old', 'error', 'Dates', 'Any', f'A date is before {DATE_FLOOR}: the year is probably mistyped.'),
     ('date_start', 'warning', 'Dates', 'Header', 'Date of interview is before the study start date (STUDY_START_DATE).'),
     ('adm_missing', 'warning', 'Dates', 'Header', 'Admission date is missing (needed for length of stay and lab timing).'),

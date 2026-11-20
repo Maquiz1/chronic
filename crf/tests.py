@@ -548,6 +548,18 @@ class DateTests(TestCase):
         self.assertContains(r, 'Laboratory sample is after the date of death')
         self.assertContains(r, 'Admission date is after the interview date')
 
+    def test_future_interview_or_admission_refused(self):
+        tomorrow = timezone.localdate() + datetime.timedelta(days=1)
+        r = self.client.post(reverse('crf:edit', args=[self.p.pk]), {'hospital_id': 'M11-00-03',
+                                                                   'interview_date': self.p.interview_date,
+                                                                   'admission_date': tomorrow})
+        self.assertContains(r, 'The admission date cannot be in the future.')
+        r = self.client.post(reverse('crf:create'), {'hospital_id': 'M11-00-04', 'interview_date': tomorrow})
+        self.assertContains(r, 'The date of interview cannot be in the future.')
+        self.assertEqual(Participant.objects.count(), 1)
+        self.assertEqual(Participant.objects.get().admission_date, self.adm)
+        self.assertContains(self.client.get(reverse('crf:create')), f'max="{timezone.localdate():%Y-%m-%d}"')
+
     def test_date_warnings_and_filter(self):
         self.client.post(self.url, {'outcome': '2', 'death_date': self.adm + datetime.timedelta(days=1), 'los_days': '9'})
         rules = {i.rule for i in checks.all_issues(Participant.objects.get().values())}
@@ -576,10 +588,11 @@ class SidebarCountTests(TestCase):
 
     def test_badges_show_and_update_after_saving(self):
         today = timezone.localdate()
-        self.client.post(reverse('crf:create'), {'hospital_id': 'M55-00-01', 'interview_date': today,
-                                                 'admission_date': today + datetime.timedelta(days=3)})
+        self.client.post(reverse('crf:create'), {'hospital_id': 'M55-00-01',
+                                                 'interview_date': today - datetime.timedelta(days=1),
+                                                 'admission_date': today})
         r = self.client.get(reverse('dashboard'))
-        self.assertContains(r, 'class="side-badge danger" title="Errors">2<')  # admission in the future and after the interview
+        self.assertContains(r, 'class="side-badge danger" title="Errors">1<')  # admission after the interview
         self.assertContains(r, 'title="Records still waiting for investigation results (Section G)">1<')
         p = Participant.objects.get()
         DataQuery.objects.create(participant=p, section='A', field='age', message='Check', raised_by=self.dm)

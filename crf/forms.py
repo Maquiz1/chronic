@@ -2,6 +2,7 @@ import re
 from decimal import Decimal
 
 from django import forms
+from django.utils import timezone
 from django.urls import reverse
 from django.utils.html import format_html
 
@@ -58,9 +59,24 @@ class ParticipantForm(BootstrapFormMixin, forms.ModelForm):
     def __init__(self, *args, show_identity=True, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['hospital_id'].required = True
+        today = timezone.localdate().isoformat()
+        for name in ('interview_date', 'admission_date'):
+            self.fields[name].widget.attrs['max'] = today  # the date picker offers no future dates
         if not show_identity:
             del self.fields['phone_number']
             del self.fields['hospital_id']
+
+    def _not_future(self, name, label):
+        value = self.cleaned_data.get(name)
+        if value and value > timezone.localdate():
+            raise forms.ValidationError(f'{label} cannot be in the future.')
+        return value
+
+    def clean_interview_date(self):
+        return self._not_future('interview_date', 'The date of interview')
+
+    def clean_admission_date(self):
+        return self._not_future('admission_date', 'The admission date')
 
     def clean_phone_number(self):
         raw = self.cleaned_data.get('phone_number') or ''
